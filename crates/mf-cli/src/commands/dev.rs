@@ -4,7 +4,7 @@ use mf_core::{
 };
 use std::path::Path;
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 pub fn run(json: bool) -> anyhow::Result<()> {
     run_inner(Path::new("."), json)
@@ -50,9 +50,13 @@ fn run_inner(dir: &Path, json: bool) -> anyhow::Result<()> {
     let watcher = ProjectWatcher::new(dir)
         .map_err(|e| anyhow::anyhow!("failed to start file watcher: {e}"))?;
 
-    // 4. Main loop: start -> watch -> restart on crash/change
-    let mut restart_count = 0;
+    // 4. Main loop: start -> watch -> restart on crash/change.
+    // The restart counter resets after a stable run, so only rapid
+    // consecutive restarts (a crash/edit loop) trip the limit.
+    let mut restart_count = 0u32;
+    let mut last_restart_at = Instant::now();
     const MAX_RESTARTS: u32 = 10;
+    const RESTART_WINDOW: Duration = Duration::from_secs(5);
 
     loop {
         let config = build_launch_config(player.clone(), dir.to_path_buf());
@@ -81,9 +85,16 @@ fn run_inner(dir: &Path, json: bool) -> anyhow::Result<()> {
         // Kill process if still running
         let _ = process.kill();
 
+        // Reset the counter if the previous run was stable for longer than
+        // RESTART_WINDOW, so only rapid consecutive restarts count.
+        if last_restart_at.elapsed() > RESTART_WINDOW {
+            restart_count = 0;
+        }
+
         match exit_code {
             DevExitReason::FileChanged(path) => {
                 restart_count += 1;
+                last_restart_at = Instant::now();
                 if restart_count > MAX_RESTARTS {
                     return Err(anyhow::anyhow!(
                         "too many restarts ({}) — something is wrong. Stopping.",
@@ -110,6 +121,7 @@ fn run_inner(dir: &Path, json: bool) -> anyhow::Result<()> {
             }
             DevExitReason::ProcessCrashed(code) => {
                 restart_count += 1;
+                last_restart_at = Instant::now();
                 if restart_count > MAX_RESTARTS {
                     return Err(anyhow::anyhow!(
                         "runtime crashed too many times ({}). Last exit code: {}",

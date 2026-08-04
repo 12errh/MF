@@ -109,6 +109,8 @@ mod tests {
         let mut process = RuntimeProcess::spawn(&config).expect("spawn script");
         assert!(process.is_running());
         process.kill().expect("kill script");
+        // Reap the child so the test leaves no zombie process.
+        let _ = process.wait();
     }
 
     #[test]
