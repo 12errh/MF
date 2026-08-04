@@ -24,6 +24,21 @@ enum Commands {
     Doctor,
     /// Start the development server
     Dev,
+    /// Manage runtime versions
+    Runtime {
+        #[command(subcommand)]
+        command: RuntimeCommands,
+    },
+}
+
+#[derive(Subcommand)]
+enum RuntimeCommands {
+    /// List installed runtime versions
+    List,
+    /// Show runtime status
+    Status,
+    /// Install a runtime version
+    Install,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -33,5 +48,13 @@ fn main() -> anyhow::Result<()> {
         Commands::New { name } => commands::new::run(&name, cli.json),
         Commands::Doctor => commands::doctor::run(cli.json),
         Commands::Dev => commands::dev::run(cli.json),
+        Commands::Runtime { command } => {
+            let subcmd = match &command {
+                RuntimeCommands::List => "list",
+                RuntimeCommands::Status => "status",
+                RuntimeCommands::Install => "install",
+            };
+            commands::runtime::run(subcmd, cli.json)
+        }
     }
 }
