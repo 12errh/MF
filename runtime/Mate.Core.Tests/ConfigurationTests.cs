@@ -55,6 +55,17 @@ namespace Mate.Core.Tests
         }
 
         [Test]
+        public void Reload_RereadsSavedValues()
+        {
+            var config = new FileConfiguration(_testDir);
+            config.Set("soundThreshold", 0.7f);
+            config.Save();
+            config.Set("soundThreshold", 1.0f); // in-memory change without save
+            config.Reload();
+            Assert.AreEqual(0.7f, config.GetFloat("soundThreshold", 0.2f));
+        }
+
+        [Test]
         public void GetString_ReturnsDefault_WhenMissing()
         {
             var config = new FileConfiguration(_testDir);

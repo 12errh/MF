@@ -35,7 +35,9 @@ namespace Mate.Core
             if (!_handlers.ContainsKey(typeof(T)))
                 return;
 
-            foreach (var (_, handler) in _handlers[typeof(T)])
+            // Snapshot so a handler unsubscribing during delivery cannot
+            // mutate the list being enumerated.
+            foreach (var (_, handler) in _handlers[typeof(T)].ToArray())
             {
                 ((Action<T>)handler).Invoke(eventData);
             }

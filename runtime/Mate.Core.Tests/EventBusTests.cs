@@ -60,5 +60,23 @@ namespace Mate.Core.Tests
             Assert.AreEqual(1, intCount);
             Assert.AreEqual(1, stringCount);
         }
+
+        [Test]
+        public void Clear_RemovesAllHandlers()
+        {
+            var bus = new SimpleEventBus();
+            int count = 0;
+            bus.Subscribe<string>(_ => count++);
+            bus.Clear();
+            bus.Publish("x");
+            Assert.AreEqual(0, count);
+        }
+
+        [Test]
+        public void Publish_Before_Subscribe_NoOp()
+        {
+            var bus = new SimpleEventBus();
+            Assert.DoesNotThrow(() => bus.Publish("before"));
+        }
     }
 }

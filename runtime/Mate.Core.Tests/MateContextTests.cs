@@ -50,6 +50,15 @@ namespace Mate.Core.Tests
         }
 
         [Test]
+        public void IsRegistered_ReflectsRegistrations()
+        {
+            var ctx = new MateContext();
+            Assert.IsFalse(ctx.IsRegistered<IEventBus>());
+            ctx.Register<IEventBus>(() => new SimpleEventBus());
+            Assert.IsTrue(ctx.IsRegistered<IEventBus>());
+        }
+
+        [Test]
         public void Dispose_CallsDisposeOnRegisteredServices()
         {
             var ctx = new MateContext();
