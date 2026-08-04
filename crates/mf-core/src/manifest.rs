@@ -169,12 +169,24 @@ impl Default for AnimationConfig {
     }
 }
 
-fn default_idle_count() -> i32 { 10 }
-fn default_dance_count() -> i32 { 5 }
-fn default_idle_switch() -> f32 { 10.0 }
-fn default_idle_transition() -> f32 { 1.0 }
-fn default_dance_switch() -> f32 { 15.0 }
-fn default_dance_transition() -> f32 { 2.0 }
+fn default_idle_count() -> i32 {
+    10
+}
+fn default_dance_count() -> i32 {
+    5
+}
+fn default_idle_switch() -> f32 {
+    10.0
+}
+fn default_idle_transition() -> f32 {
+    1.0
+}
+fn default_dance_switch() -> f32 {
+    15.0
+}
+fn default_dance_transition() -> f32 {
+    2.0
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct AiConfig {
@@ -192,9 +204,15 @@ pub struct AiConfig {
     pub system_prompt: String,
 }
 
-fn default_ai_provider() -> String { "ollama".into() }
-fn default_ai_model() -> String { "phi3:mini".into() }
-fn default_context_length() -> i32 { 4096 }
+fn default_ai_provider() -> String {
+    "ollama".into()
+}
+fn default_ai_model() -> String {
+    "phi3:mini".into()
+}
+fn default_context_length() -> i32 {
+    4096
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct DiscordConfig {
@@ -231,7 +249,9 @@ impl Default for SystemConfig {
     }
 }
 
-fn default_tray_tooltip() -> String { "My Mate".into() }
+fn default_tray_tooltip() -> String {
+    "My Mate".into()
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ModsConfig {
@@ -250,7 +270,9 @@ impl Default for ModsConfig {
     }
 }
 
-fn default_mods_path() -> String { "mods/".into() }
+fn default_mods_path() -> String {
+    "mods/".into()
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct PerformanceConfig {
@@ -275,8 +297,12 @@ impl Default for PerformanceConfig {
     }
 }
 
-fn default_fps_limit() -> i32 { 90 }
-fn default_graphics_quality() -> i32 { 1 }
+fn default_fps_limit() -> i32 {
+    90
+}
+fn default_graphics_quality() -> i32 {
+    1
+}
 
 // ---- Parse & Validate ----
 
@@ -527,6 +553,9 @@ graphics_quality = 2
     fn default_manifest_has_correct_name() {
         let manifest = default_manifest("hello");
         assert_eq!(manifest.project.name, "hello");
-        assert_eq!(manifest.project.description, "A Mate Framework project: hello");
+        assert_eq!(
+            manifest.project.description,
+            "A Mate Framework project: hello"
+        );
     }
 }

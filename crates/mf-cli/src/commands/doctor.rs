@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 pub fn run(json: bool) -> anyhow::Result<()> {
     run_inner(Path::new("."), json)
@@ -92,8 +92,8 @@ fn run_inner(dir: &Path, json: bool) -> anyhow::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::TempDir;
     use std::fs;
+    use tempfile::TempDir;
 
     fn setup_project(dir: &std::path::Path, toml_content: &str) {
         fs::write(dir.join("mate.toml"), toml_content).unwrap();

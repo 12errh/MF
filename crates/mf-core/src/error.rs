@@ -31,10 +31,7 @@ mod tests {
         let err = MfError::ManifestNotFound {
             path: "/tmp/test/mate.toml".into(),
         };
-        assert_eq!(
-            err.to_string(),
-            "manifest not found at /tmp/test/mate.toml"
-        );
+        assert_eq!(err.to_string(), "manifest not found at /tmp/test/mate.toml");
     }
 
     #[test]
