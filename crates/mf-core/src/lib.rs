@@ -1,9 +1,11 @@
+pub mod build;
 pub mod error;
 pub mod manifest;
 pub mod process;
 pub mod runtime;
 pub mod watcher;
 
+pub use build::{BuildResult, build_project};
 pub use error::MfError;
 pub use manifest::{MateManifest, default_manifest, parse_manifest, validate_manifest};
 pub use process::{RuntimeLaunchConfig, RuntimeProcess, build_launch_config};

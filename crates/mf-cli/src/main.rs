@@ -29,6 +29,14 @@ enum Commands {
         #[command(subcommand)]
         command: RuntimeCommands,
     },
+    /// Build the project into a distributable directory
+    Build {
+        /// Output directory (default: build/)
+        #[arg(long, short)]
+        output: Option<String>,
+    },
+    /// Package the built project into a tar.gz archive
+    Package,
 }
 
 #[derive(Subcommand)]
@@ -56,5 +64,7 @@ fn main() -> anyhow::Result<()> {
             };
             commands::runtime::run(subcmd, cli.json)
         }
+        Commands::Build { output } => commands::build::run(output.as_deref(), cli.json),
+        Commands::Package => commands::package::run(cli.json),
     }
 }
