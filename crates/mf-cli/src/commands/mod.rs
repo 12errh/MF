@@ -1,4 +1,5 @@
 pub mod build;
+pub mod capabilities;
 pub mod dev;
 pub mod doctor;
 pub mod new;

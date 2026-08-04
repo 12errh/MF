@@ -37,6 +37,8 @@ enum Commands {
     },
     /// Package the built project into a tar.gz archive
     Package,
+    /// Show platform capabilities
+    Capabilities,
 }
 
 #[derive(Subcommand)]
@@ -66,5 +68,6 @@ fn main() -> anyhow::Result<()> {
         }
         Commands::Build { output } => commands::build::run(output.as_deref(), cli.json),
         Commands::Package => commands::package::run(cli.json),
+        Commands::Capabilities => commands::capabilities::run(cli.json),
     }
 }
