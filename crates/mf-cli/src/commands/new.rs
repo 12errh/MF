@@ -3,6 +3,8 @@ use std::fs;
 use std::path::PathBuf;
 
 pub fn run(name: &str, json: bool) -> anyhow::Result<()> {
+    validate_project_name(name)?;
+
     let manifest = default_manifest(name);
     validate_manifest(&manifest).map_err(|e| anyhow::anyhow!("{}", e))?;
 
@@ -37,4 +39,30 @@ pub fn run(name: &str, json: bool) -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+fn validate_project_name(name: &str) -> anyhow::Result<()> {
+    if name.is_empty() || name == "." || name == ".." || name.contains('/') || name.contains('\\') {
+        return Err(anyhow::anyhow!("invalid project name: '{}'", name));
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rejects_path_traversal() {
+        assert!(validate_project_name("../escape").is_err());
+        assert!(validate_project_name("a/b").is_err());
+        assert!(validate_project_name("..").is_err());
+        assert!(validate_project_name(".").is_err());
+        assert!(validate_project_name("").is_err());
+    }
+
+    #[test]
+    fn accepts_simple_name() {
+        assert!(validate_project_name("my-mate").is_ok());
+    }
 }
