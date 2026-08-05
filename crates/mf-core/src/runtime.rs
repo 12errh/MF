@@ -59,9 +59,8 @@ impl RuntimeVersion {
     pub fn remove(&self) -> Result<(), MfError> {
         let dir = self.cache_dir();
         if dir.exists() {
-            std::fs::remove_dir_all(&dir).map_err(|e| {
-                MfError::Io(format!("failed to remove runtime {}: {}", self.0, e))
-            })?;
+            std::fs::remove_dir_all(&dir)
+                .map_err(|e| MfError::Io(format!("failed to remove runtime {}: {}", self.0, e)))?;
         }
         Ok(())
     }

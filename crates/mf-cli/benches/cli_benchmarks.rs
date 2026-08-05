@@ -1,16 +1,11 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use std::path::PathBuf;
 use std::process::Command;
 
 /// Bench `mf --help` — CLI startup + parse time.
 fn bench_mf_help(c: &mut Criterion) {
     c.bench_function("mf_help", |b| {
-        b.iter(|| {
-            Command::new(binary_path())
-                .arg("--help")
-                .output()
-                .unwrap()
-        })
+        b.iter(|| Command::new(binary_path()).arg("--help").output().unwrap())
     });
 }
 

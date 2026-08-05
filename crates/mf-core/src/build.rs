@@ -39,8 +39,7 @@ impl BuildManifest {
     pub fn read(dir: &Path) -> Result<Self, MfError> {
         let json = std::fs::read_to_string(dir.join("build-manifest.json"))
             .map_err(|e| MfError::Io(format!("failed to read build manifest: {e}")))?;
-        serde_json::from_str(&json)
-            .map_err(|e| MfError::Io(format!("invalid build manifest: {e}")))
+        serde_json::from_str(&json).map_err(|e| MfError::Io(format!("invalid build manifest: {e}")))
     }
 }
 
@@ -393,7 +392,7 @@ runtime = "1.0.0"
         assert!(output.path().join("build-manifest.json").exists());
         assert_eq!(result.manifest.runtime_version, "1.0.0");
         assert_eq!(result.manifest.project_version, "0.3.0");
-        assert!(result.manifest.assets.len() >= 1);
+        assert!(!result.manifest.assets.is_empty());
     }
 
     #[test]

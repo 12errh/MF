@@ -5,12 +5,12 @@ use crate::MfError;
 /// Validate that a path does not escape the project directory.
 /// Both paths are canonicalized; the target must resolve inside the project.
 pub fn validate_path(project_dir: &Path, target: &Path) -> Result<(), MfError> {
-    let canonical_project = project_dir.canonicalize().map_err(|e| {
-        MfError::Io(format!("cannot resolve project dir: {}", e))
-    })?;
-    let canonical_target = target.canonicalize().map_err(|e| {
-        MfError::Io(format!("cannot resolve target path: {}", e))
-    })?;
+    let canonical_project = project_dir
+        .canonicalize()
+        .map_err(|e| MfError::Io(format!("cannot resolve project dir: {}", e)))?;
+    let canonical_target = target
+        .canonicalize()
+        .map_err(|e| MfError::Io(format!("cannot resolve target path: {}", e)))?;
 
     if !canonical_target.starts_with(&canonical_project) {
         return Err(MfError::SecurityViolation(format!(

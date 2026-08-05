@@ -102,11 +102,10 @@ fn collect_checks(dir: &Path) -> Vec<(&'static str, &'static str, String)> {
 
     // Check 4: runtime
     let installed = mf_core::list_installed();
-    let project_runtime = mf_core::parse_manifest(
-        &std::fs::read_to_string(manifest_path).unwrap_or_default(),
-    )
-    .map(|m| m.project.runtime)
-    .unwrap_or_default();
+    let project_runtime =
+        mf_core::parse_manifest(&std::fs::read_to_string(manifest_path).unwrap_or_default())
+            .map(|m| m.project.runtime)
+            .unwrap_or_default();
 
     if installed.is_empty() {
         checks.push((
