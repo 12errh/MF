@@ -1,14 +1,20 @@
 ---
 feature: unity-bootstrap
-status: in-progress
+status: delivered
 updated: 2026-08-05
 branch: unity-bootstrap
-commits: # filled at delivery
+commits: 7824074..567326a
 ---
 
 # Unity Bootstrap — Composition Root & Scene
 
 ## Report
+
+**What was built** — The runtime now has a composition root. `MateBootstrap : MonoBehaviour` is the entry point: it parses `--projectPath` from player args (`BootstrapArgs`), creates the scene objects the grabbed monoliths require (Camera + AudioListener, `VRMLoader`, `PulseAudioManager`), composes every service into a `MateContext` via `BootstrapComposer`, loads the configured model, and drives `PulseAudioService.Poll()` + `MouseTracker.Update()` each frame. `MateTomlConfig` maps the project's `mate.toml` (snake_case sections) to the camelCase keys the services read, with defaults for missing keys. A `Tools/Mate/Create Bootstrap Scene` editor tool generates the entry scene (Camera + MateBootstrap) and registers it in `EditorBuildSettings`; the generated `Scenes/Bootstrap.unity` is committed so a fresh clone can build a player.
+
+**Verification** — Unity headless EditMode suite: 339 total, 305 passed, 34 failed — all 34 are PRE-EXISTING vendored UniGLTF/VRM/UniVRM10 failures. Mate.* tests: 103 pass, 0 fail (84 prior + 19 new: 8 MateTomlConfig + 5 BootstrapArgs + 6 BootstrapComposer), 12/12 in the Bootstrap filter. Headless compile 0 CS errors. Scene builder invoked headless created `Scenes/Bootstrap.unity` and added it to `EditorBuildSettings` (verified on disk).
+
+**Journey log** — (1) The `Mate.System` namespace shadows global `System` (known project quirk) — `global::System.IO`/`global::System.Globalization` are required in `Mate.*` namespaces. (2) `BootstrapComposer` must register stateful services as **singletons** — a transient `ICharacterService` caused a real failure (model loaded into instance A, resolved instance B). (3) The scene builder's confirmation `DisplayDialog` blocks headless batchmode — skipped when `Application.isBatchMode`. (4) Unity's editor process does not auto-exit after `-executeMethod` (lifecycle quirk; run with a `timeout` and clear `Temp/UnityLockfile`). (5) `AudioReactiveBridge` is `IDisposable` (unsubscribes) but was dropped unregistered — now registered as a singleton so `MateContext.Dispose` unsubscribes it (regression test added).
 
 ## [S1] Problem
 
@@ -125,19 +131,19 @@ defaults. `Get*` lookup order: mapped value → raw dotted key → default.
 
 ## Tasks
 
-- [ ] T1: `MateTomlConfig` (parse + map `mate.toml` → service keys) + tests —
+- [x] T1: `MateTomlConfig` (parse + map `mate.toml` → service keys) + tests —
       acceptance: MateTomlConfigTests pass headless (covers: S2-Config; S2-Testing)
-- [ ] T2: `BootstrapArgs.ParseProjectPath` + tests — acceptance:
+- [x] T2: `BootstrapArgs.ParseProjectPath` + tests — acceptance:
       BootstrapArgsTests pass (covers: S2-Architecture; S2-Testing)
-- [ ] T3: `BootstrapComposer.Compose` (register all services + model load) +
+- [x] T3: `BootstrapComposer.Compose` (register all services + model load) +
       tests — acceptance: BootstrapComposerTests pass (covers: S2-Architecture;
       S2-Error; S2-Testing)
-- [ ] T4: `MateBootstrap` MonoBehaviour (scene objects, Update loop, dispose)
+- [x] T4: `MateBootstrap` MonoBehaviour (scene objects, Update loop, dispose)
       + `MateSceneBuilder` editor tool — acceptance: headless compile 0 CS
       errors, `Tools/Mate/Create Bootstrap Scene` creates scene with Camera +
       MateBootstrap and adds to build settings (covers: S2-Architecture;
       S2-Scene)
-- [ ] T5: Full headless EditMode suite green (existing 84 + new Mate.* tests,
+- [x] T5: Full headless EditMode suite green (existing 84 + new Mate.* tests,
       0 failures; 34 vendored PRE-EXISTING) — acceptance: `-runTests
       -testPlatform EditMode` shows all Mate.* pass (covers: S2-Testing;
       depends: T1,T2,T3,T4)
