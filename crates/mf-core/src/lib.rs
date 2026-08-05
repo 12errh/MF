@@ -3,6 +3,7 @@ pub mod error;
 pub mod manifest;
 pub mod process;
 pub mod runtime;
+pub mod security;
 pub mod watcher;
 
 pub use build::{BuildManifest, BuildResult, PackageResult, build_project, package_project};
@@ -13,4 +14,5 @@ pub use runtime::{
     InstallStatus, RuntimeVersion, install_runtime, is_installed, list_installed, player_path,
     remove_runtime, resolve_version, runtime_cache_dir, runtime_path,
 };
+pub use security::{validate_path, validate_url};
 pub use watcher::{ProjectWatcher, WatcherEvent};

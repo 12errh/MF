@@ -1,0 +1,33 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Build release
+        run: cargo build --release -p mf
+      - name: Create archive
+        run: tar -czf mf-linux-x64.tar.gz -C target/release mf
+      - name: Get version
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Mate Framework v${{ steps.version.outputs.VERSION }}"
+          body: |
+            ## What's Changed
+            See [CHANGELOG.md](CHANGELOG.md) for details.
+          files: mf-linux-x64.tar.gz
+          draft: false
+          prerelease: false

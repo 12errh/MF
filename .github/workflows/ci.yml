@@ -22,3 +22,25 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Test
         run: cargo test --workspace
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Build CLI
+        run: cargo build -p mf
+      - name: Run integration tests
+        run: |
+          MF=target/debug/mf
+          $MF new test-project
+          cd test-project
+          $MF doctor
+          $MF runtime status
+          $MF build
+          test -f build/build-manifest.json
+          $MF package
+          test -f build/test-project.tar.gz
+          $MF capabilities
