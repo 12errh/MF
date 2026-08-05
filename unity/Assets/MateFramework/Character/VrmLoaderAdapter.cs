@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using Mate.Interfaces;
 using UnityEngine;
@@ -15,9 +16,9 @@ namespace Mate.Character
         {
             // The grabbed VRMLoader.LoadVRM is async void (fire-and-forget),
             // so yield a frame to let it complete before reading the model.
-            var loader = Object.FindFirstObjectByType<VRMLoader>();
+            var loader = UnityEngine.Object.FindFirstObjectByType<VRMLoader>();
             if (loader == null)
-                throw new System.InvalidOperationException("VRMLoader component not found in scene");
+                throw new InvalidOperationException("VRMLoader component not found in scene");
 
             loader.LoadVRM(path);
             await Task.Yield();
@@ -27,7 +28,7 @@ namespace Mate.Character
         public Task UnloadAsync(GameObject model)
         {
             if (model != null)
-                Object.Destroy(model);
+                UnityEngine.Object.Destroy(model);
             return Task.CompletedTask;
         }
     }
