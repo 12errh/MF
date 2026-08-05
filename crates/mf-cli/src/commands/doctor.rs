@@ -1,16 +1,54 @@
 use std::path::Path;
 
+use mf_core::MfError;
+
 pub fn run(json: bool) -> anyhow::Result<()> {
-    run_inner(Path::new("."), json)
+    if json {
+        let payload = run_doctor_json(Path::new("."))?;
+        println!("{payload}");
+    } else {
+        let report = run_doctor(Path::new("."))?;
+        println!("{report}");
+    }
+    Ok(())
 }
 
-fn run_inner(dir: &Path, json: bool) -> anyhow::Result<()> {
-    let mut checks: Vec<(&str, &str, String)> = Vec::new();
+/// Run all checks and return a human-readable report.
+pub fn run_doctor(dir: &Path) -> Result<String, MfError> {
+    let checks = collect_checks(dir);
+    let mut out = String::new();
+    for (name, status, detail) in &checks {
+        let icon = match *status {
+            "ok" => "\u{2705}",
+            "warning" => "\u{26a0}\u{fe0f}",
+            "info" => "\u{2139}\u{fe0f}",
+            _ => "\u{274c}",
+        };
+        out.push_str(&format!("  {icon} {name}: {detail}\n"));
+    }
+    Ok(out)
+}
+
+/// Run all checks and return the JSON payload (a `{ "checks": [...] }` object).
+pub fn run_doctor_json(dir: &Path) -> Result<String, MfError> {
+    let checks = collect_checks(dir);
+    let items: Vec<_> = checks
+        .iter()
+        .map(|(name, status, detail)| {
+            serde_json::json!({ "name": name, "status": status, "detail": detail })
+        })
+        .collect();
+    serde_json::to_string_pretty(&serde_json::json!({ "checks": items }))
+        .map_err(|e| MfError::Io(format!("failed to serialize doctor output: {e}")))
+}
+
+fn collect_checks(dir: &Path) -> Vec<(&'static str, &'static str, String)> {
+    let mut checks: Vec<(&'static str, &'static str, String)> = Vec::new();
 
     // Check 1: mate.toml exists and is valid
     let manifest_path = dir.join("mate.toml");
     if manifest_path.exists() {
-        let content = std::fs::read_to_string(&manifest_path)?;
+        let content = std::fs::read_to_string(&manifest_path).unwrap_or_default();
         match mf_core::parse_manifest(&content) {
             Ok(manifest) => {
                 match mf_core::validate_manifest(&manifest) {
@@ -62,31 +100,69 @@ fn run_inner(dir: &Path, json: bool) -> anyhow::Result<()> {
         ));
     }
 
-    // Output
-    if json {
-        let items: Vec<_> = checks
-            .iter()
-            .map(|(name, status, detail)| {
-                serde_json::json!({ "name": name, "status": status, "detail": detail })
-            })
-            .collect();
-        println!(
-            "{}",
-            serde_json::to_string_pretty(&serde_json::json!({ "checks": items }))?
-        );
+    // Check 4: runtime
+    let installed = mf_core::list_installed();
+    let project_runtime = mf_core::parse_manifest(
+        &std::fs::read_to_string(manifest_path).unwrap_or_default(),
+    )
+    .map(|m| m.project.runtime)
+    .unwrap_or_default();
+
+    if installed.is_empty() {
+        checks.push((
+            "runtime",
+            "error",
+            "no runtimes installed. Run `mf runtime install`".into(),
+        ));
+    } else if project_runtime.is_empty() || installed.contains(&project_runtime) {
+        checks.push((
+            "runtime",
+            "ok",
+            format!("{} installed", installed.join(", ")),
+        ));
     } else {
-        for (name, status, detail) in &checks {
-            let icon = match *status {
-                "ok" => "\u{2705}",
-                "warning" => "\u{26a0}\u{fe0f}",
-                "info" => "\u{2139}\u{fe0f}",
-                _ => "\u{274c}",
-            };
-            println!("  {icon} {name}: {detail}");
-        }
+        checks.push((
+            "runtime",
+            "warning",
+            format!(
+                "project needs v{project_runtime}, but only {} installed. Run `mf runtime install {project_runtime}`",
+                installed.join(", ")
+            ),
+        ));
     }
 
-    Ok(())
+    // Check 5: display server
+    let session = std::env::var("XDG_SESSION_TYPE").unwrap_or_default();
+    let desktop = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default();
+    if session.is_empty() {
+        checks.push((
+            "display_server",
+            "warning",
+            "XDG_SESSION_TYPE not set. Are you running X11 or Wayland?".into(),
+        ));
+    } else {
+        checks.push((
+            "display_server",
+            "ok",
+            format!("session: {session} ({desktop})"),
+        ));
+    }
+
+    // Check 6: permissions (can we write to the project dir?)
+    let probe = dir.join(".mf-write-probe");
+    let writable = std::fs::write(&probe, b"probe").is_ok();
+    let _ = std::fs::remove_file(&probe);
+    if writable {
+        checks.push(("permissions", "ok", "project dir is writable".into()));
+    } else {
+        checks.push((
+            "permissions",
+            "warning",
+            format!("cannot write to {}", dir.display()),
+        ));
+    }
+
+    checks
 }
 
 #[cfg(test)]
@@ -109,14 +185,14 @@ name = "test"
 runtime = "1.0.0"
 "#;
         setup_project(tmp.path(), toml);
-        let result = run_inner(tmp.path(), false);
+        let result = run_doctor(tmp.path());
         assert!(result.is_ok());
     }
 
     #[test]
     fn doctor_missing_manifest() {
         let tmp = TempDir::new().unwrap();
-        let result = run_inner(tmp.path(), false);
+        let result = run_doctor(tmp.path());
         assert!(result.is_ok()); // doctor doesn't fail, it reports errors
     }
 
@@ -124,7 +200,7 @@ runtime = "1.0.0"
     fn doctor_invalid_manifest() {
         let tmp = TempDir::new().unwrap();
         fs::write(tmp.path().join("mate.toml"), "not valid {{{{").unwrap();
-        let result = run_inner(tmp.path(), false);
+        let result = run_doctor(tmp.path());
         assert!(result.is_ok()); // doctor reports, doesn't fail
     }
 
@@ -137,7 +213,40 @@ name = "test"
 runtime = "1.0.0"
 "#;
         setup_project(tmp.path(), toml);
-        let result = run_inner(tmp.path(), true);
+        let result = run_doctor_json(tmp.path());
         assert!(result.is_ok());
+        let json: serde_json::Value = serde_json::from_str(&result.unwrap()).unwrap();
+        assert!(json.is_object());
+        assert!(json["checks"].is_array());
+    }
+
+    #[test]
+    fn doctor_json_output_has_all_check_names() {
+        let tmp = TempDir::new().unwrap();
+        let result = run_doctor_json(tmp.path()).unwrap();
+        let json: serde_json::Value = serde_json::from_str(&result).unwrap();
+        let names: Vec<String> = json["checks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|c| c["name"].as_str().unwrap().to_string())
+            .collect();
+        for expected in [
+            "manifest",
+            "runtime",
+            "assets",
+            "display_server",
+            "permissions",
+        ] {
+            assert!(names.contains(&expected.to_string()), "missing {expected}");
+        }
+    }
+
+    #[test]
+    fn doctor_reports_missing_runtime_guidance() {
+        let tmp = TempDir::new().unwrap();
+        // No runtimes installed in the real cache — report should include guidance.
+        let result = run_doctor(tmp.path()).unwrap();
+        assert!(result.contains("mf runtime install"));
     }
 }
