@@ -49,8 +49,9 @@ namespace Mate.Bootstrap
             ctx.RegisterSingleton<IAIService>(new OllamaProvider(config, bus));
             ctx.RegisterSingleton<IModService>(new ModService());
 
-            // Cross-module bridge: audio peaks trigger dance events.
-            new AudioReactiveBridge(bus, config);
+            // Cross-module bridge: audio peaks trigger dance events. Registered
+            // so MateContext.Dispose runs its IDisposable.Dispose (unsubscribe).
+            ctx.RegisterSingleton<AudioReactiveBridge>(new AudioReactiveBridge(bus, config));
 
             return ctx;
         }

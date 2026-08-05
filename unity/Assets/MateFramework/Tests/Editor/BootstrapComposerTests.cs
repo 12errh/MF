@@ -135,6 +135,30 @@ public class BootstrapComposerTests
         Assert.IsTrue(danced);
     }
 
+    [Test]
+    public void Compose_Dispose_UnsubscribesAudioBridge()
+    {
+        WriteToml("[audio]\nthreshold = 0.3\n");
+        var ctx = BootstrapComposer.Compose(_dir, new BootstrapComposer.Adapters
+        {
+            VrmLoader = new FakeVrmLoader(),
+            PulseAudio = new FakePulseAudio(),
+        });
+
+        var bus = ctx.Resolve<IEventBus>();
+        bool danced = false;
+        bus.Subscribe<DanceStartedEvent>(_ => danced = true);
+
+        bus.Publish(new AudioPeakEvent(0, 0.5f));
+        Assert.IsTrue(danced, "bridge should react before dispose");
+
+        ctx.Dispose();
+
+        danced = false;
+        bus.Publish(new AudioPeakEvent(0, 0.5f));
+        Assert.IsFalse(danced, "bridge must unsubscribe on context dispose");
+    }
+
     private class FakeVrmLoader : IVrmLoader
     {
         public bool Loaded;
