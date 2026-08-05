@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Unity bootstrap (composition root):
+  - `MateBootstrap` MonoBehaviour — entry point that parses `--projectPath`,
+    creates the scene objects the runtime needs, composes the `MateContext`,
+    loads the configured VRM model, and drives audio polling + mouse tracking.
+  - `BootstrapComposer` — registers all services as singletons.
+  - `MateTomlConfig` — maps `mate.toml` (snake_case sections) to the service
+    config keys.
+  - `Tools/Mate/Create Bootstrap Scene` editor tool + committed entry scene.
 - Phase 7 (Build & Package):
   - `mf runtime install <version>` stages a runtime version with validation;
     `RuntimeVersion` status/install/remove in `mf-core`.

@@ -31,8 +31,9 @@ chat — is handled by the framework's Unity runtime.
 │  new · dev · build · package · doctor · runtime · capa   │
 ├─────────────────────────────────────────────────────────┤
 │                  Mate Runtime (Unity)                    │
-│  MateContext · IEventBus · services · IConfiguration     │
-│  Character · Audio · System · AI · Mods · HotReload      │
+│  MateBootstrap (composition root) · MateContext           │
+│  IEventBus · IConfiguration · services · HotReload        │
+│  Character · Audio · System · AI · Mods                   │
 ├─────────────────────────────────────────────────────────┤
 │                Mate.Core (.NET)                          │
 │  Result pattern · event bus · service container          │
@@ -41,15 +42,17 @@ chat — is handled by the framework's Unity runtime.
 
 ### Status
 
-> ⚠️ **Early development (v0.1.0).** The CLI, core, and all four feature
-> modules are implemented and tested. The **runtime binary download is
-> staged but not yet published** — a GitHub release with the Unity runtime
-> is the remaining piece before end-to-end `mf dev` works out of the box.
+> ⚠️ **Early development (v0.1.0).** The CLI, core, all four feature modules,
+> and the Unity bootstrap (composition root + entry scene) are implemented and
+> tested. The **runtime binary download is staged but not yet published** — a
+> GitHub release with the Unity runtime is the remaining piece before
+> end-to-end `mf dev` works out of the box.
 
 | Area | Status |
 |------|--------|
 | CLI (`mf new/doctor/dev/build/package/runtime/capabilities`) | ✅ Implemented & tested |
 | Unity feature modules (Character, Audio, System, AI, Mods) | ✅ Implemented & tested |
+| Unity bootstrap (composition root + entry scene) | ✅ Implemented & tested |
 | Hot reload (config/assets) | ✅ Implemented |
 | Error messages & `mf doctor` diagnostics | ✅ Implemented |
 | Security validators (`validate_path`, `validate_url`) | ✅ Implemented |
@@ -169,12 +172,15 @@ Every command supports `--json` for machine-readable output.
 ├── unity/
 │   └── Assets/
 │       ├── MateFramework/  # Unity runtime: services, interfaces, tests
+│       │   ├── Bootstrap/  # Composition root: MateBootstrap, BootstrapComposer
 │       │   ├── Character/  # CharacterService, MouseTracker, CharacterAnimator
 │       │   ├── Audio/      # PulseAudioService, AudioReactiveBridge
 │       │   ├── System/     # SystemTrayService
 │       │   ├── AI/         # OllamaProvider, PersonalityService
 │       │   ├── Mods/       # ModService
-│       │   └── Core/       # Copied Mate.Core + HotReloadHandler
+│       │   ├── Core/       # Copied Mate.Core + HotReloadHandler
+│       │   ├── Editor/     # Scene builder tool
+│       │   └── Scenes/     # Entry scene (Camera + MateBootstrap)
 │       └── Grabbed/        # Vendored reference scripts + UniVRM packages
 ├── docs/                   # PRD, TRD, ADRs, plans, specs, getting-started
 ├── .github/workflows/      # CI + release pipelines
@@ -199,7 +205,7 @@ cargo bench -p mf --bench cli_benchmarks
 # .NET core (33 tests)
 cd runtime && dotnet test Mate.Core.sln
 
-# Unity EditMode tests (84 Mate.* tests pass; 320 total in suite)
+# Unity EditMode tests (103 Mate.* tests pass; 339 total in suite)
 #   via Unity Test Runner, or headless:
 #   <Unity 6000.2.6f2> -batchmode -nographics -projectPath unity \
 #     -runTests -testPlatform EditMode -testResults results.xml
