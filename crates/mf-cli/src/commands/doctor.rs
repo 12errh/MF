@@ -106,29 +106,7 @@ fn collect_checks(dir: &Path) -> Vec<(&'static str, &'static str, String)> {
         mf_core::parse_manifest(&std::fs::read_to_string(manifest_path).unwrap_or_default())
             .map(|m| m.project.runtime)
             .unwrap_or_default();
-
-    if installed.is_empty() {
-        checks.push((
-            "runtime",
-            "error",
-            "no runtimes installed. Run `mf runtime install`".into(),
-        ));
-    } else if project_runtime.is_empty() || installed.contains(&project_runtime) {
-        checks.push((
-            "runtime",
-            "ok",
-            format!("{} installed", installed.join(", ")),
-        ));
-    } else {
-        checks.push((
-            "runtime",
-            "warning",
-            format!(
-                "project needs v{project_runtime}, but only {} installed. Run `mf runtime install {project_runtime}`",
-                installed.join(", ")
-            ),
-        ));
-    }
+    checks.push(check_runtime(&installed, &project_runtime));
 
     // Check 5: display server
     let session = std::env::var("XDG_SESSION_TYPE").unwrap_or_default();
@@ -148,7 +126,7 @@ fn collect_checks(dir: &Path) -> Vec<(&'static str, &'static str, String)> {
     }
 
     // Check 6: permissions (can we write to the project dir?)
-    let probe = dir.join(".mf-write-probe");
+    let probe = dir.join(format!(".mf-write-probe-{}", std::process::id()));
     let writable = std::fs::write(&probe, b"probe").is_ok();
     let _ = std::fs::remove_file(&probe);
     if writable {
@@ -162,6 +140,36 @@ fn collect_checks(dir: &Path) -> Vec<(&'static str, &'static str, String)> {
     }
 
     checks
+}
+
+/// Runtime check as a pure function so the guidance branches are testable
+/// without depending on the real runtime cache on the machine.
+fn check_runtime(
+    installed: &[String],
+    project_runtime: &str,
+) -> (&'static str, &'static str, String) {
+    if installed.is_empty() {
+        return (
+            "runtime",
+            "error",
+            "no runtimes installed. Run `mf runtime install`".into(),
+        );
+    }
+    if project_runtime.is_empty() || installed.contains(&project_runtime.to_string()) {
+        return (
+            "runtime",
+            "ok",
+            format!("{} installed", installed.join(", ")),
+        );
+    }
+    (
+        "runtime",
+        "warning",
+        format!(
+            "project needs v{project_runtime}, but only {} installed. Run `mf runtime install {project_runtime}`",
+            installed.join(", ")
+        ),
+    )
 }
 
 #[cfg(test)]
@@ -242,10 +250,22 @@ runtime = "1.0.0"
     }
 
     #[test]
-    fn doctor_reports_missing_runtime_guidance() {
-        let tmp = TempDir::new().unwrap();
-        // No runtimes installed in the real cache — report should include guidance.
-        let result = run_doctor(tmp.path()).unwrap();
-        assert!(result.contains("mf runtime install"));
+    fn doctor_runtime_check_guidance_for_empty_install() {
+        let (_, status, detail) = check_runtime(&[], "1.0.0");
+        assert_eq!(status, "error");
+        assert!(detail.contains("mf runtime install"));
+    }
+
+    #[test]
+    fn doctor_runtime_check_ok_when_project_version_installed() {
+        let (_, status, _) = check_runtime(&["1.0.0".to_string()], "1.0.0");
+        assert_eq!(status, "ok");
+    }
+
+    #[test]
+    fn doctor_runtime_check_warns_when_version_mismatch() {
+        let (_, status, detail) = check_runtime(&["1.0.0".to_string()], "2.0.0");
+        assert_eq!(status, "warning");
+        assert!(detail.contains("2.0.0"));
     }
 }

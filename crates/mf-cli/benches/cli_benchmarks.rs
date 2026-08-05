@@ -9,13 +9,16 @@ fn bench_mf_help(c: &mut Criterion) {
     });
 }
 
-/// Bench `mf new <name>` — project scaffold in a fresh temp dir.
+/// Bench `mf new <name>` — project scaffold. Each iteration uses a unique
+/// project name so it exercises the happy path (a repeated name would error).
 fn bench_mf_new(c: &mut Criterion) {
     let tmp = tempfile::TempDir::new().unwrap();
     c.bench_function("mf_new", |b| {
+        let mut i = 0u64;
         b.iter(|| {
+            i += 1;
             Command::new(binary_path())
-                .args(["new", "bench-test"])
+                .args(["new", &format!("bench-{i}")])
                 .current_dir(tmp.path())
                 .output()
                 .unwrap()

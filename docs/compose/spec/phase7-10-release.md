@@ -42,8 +42,8 @@ This phase implements the full release story from the plan `docs/compose/plans/2
 ### P7.3 package_project (`crates/mf-core/src/build.rs`, `crates/mf-cli/src/commands/package.rs`)
 
 - `PackageResult { archive_path, archive_size, includes_runtime, manifest }`.
-- `package_project(project_dir, output_dir) -> Result<PackageResult, MfError>`: build via existing `build_project`, write BuildManifest (runtime version read from the project's `mate.toml`), scan output dir recursively into manifest assets, `tar -czf` the build dir, return archive metadata. **Adaptation**: the plan references `build_result.manifest_version`/`build_result.manifest` — actual `BuildResult` only has `manifest: String` (project name); runtime version comes from the parsed manifest via `parse_manifest`.
-- `scan_assets(dir, manifest)` recursive helper.
+- `build_project` writes `build-manifest.json` into the output dir (runtime version + project version + scanned asset list) — so `mf build` produces the manifest per the plan's exit criteria. **Adaptation**: the plan references `build_result.manifest_version`/`build_result.manifest` — actual `BuildResult` only has `manifest: String` (project name); runtime version comes from the parsed manifest via `parse_manifest`.
+- `package_project(project_dir, output_dir) -> Result<PackageResult, MfError>`: build via `build_project` (which writes the manifest), read the manifest back, `tar -czf` the build dir, return archive metadata. `scan_assets` skips `.tar.gz` and `build-manifest.json` so re-package doesn't nest the prior archive.
 - CLI `package.rs` delegates to `package_project` (build dir from current dir, `build` output dir) instead of hand-rolling tar.
 - Tests: creates archive (exists, size>0, .tar.gz suffix), includes build manifest, works without assets (T29).
 

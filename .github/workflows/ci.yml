@@ -34,7 +34,7 @@ jobs:
         run: cargo build -p mf
       - name: Run integration tests
         run: |
-          MF=target/debug/mf
+          MF=$(pwd)/target/debug/mf
           $MF new test-project
           cd test-project
           $MF doctor

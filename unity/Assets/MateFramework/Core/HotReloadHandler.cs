@@ -13,10 +13,11 @@ namespace Mate.Core
     public class HotReloadHandler : IDisposable
     {
         private readonly IEventBus _eventBus;
-        private readonly FileSystemWatcher _watcher;
         private readonly Timer _debounceTimer;
         private readonly int _debounceMs;
+        private readonly object _sync = new object();
 
+        private FileSystemWatcher _watcher;
         private DateTime _lastReloadTime;
         private bool _disposed;
 
@@ -71,14 +72,17 @@ namespace Mate.Core
 
         private void OnChanged(object sender, FileSystemEventArgs e)
         {
-            if (_disposed)
-                return;
+            lock (_sync)
+            {
+                if (_disposed)
+                    return;
 
-            var ext = Path.GetExtension(e.Name);
-            if (!ShouldWatch(ext))
-                return;
+                var ext = Path.GetExtension(e.Name);
+                if (!ShouldWatch(ext))
+                    return;
 
-            _debounceTimer.Change(_debounceMs, Timeout.Infinite);
+                _debounceTimer.Change(_debounceMs, Timeout.Infinite);
+            }
         }
 
         private void DebounceCallback(object state)
@@ -88,15 +92,18 @@ namespace Mate.Core
 
         public void Dispose()
         {
-            if (_disposed)
-                return;
-            _disposed = true;
-
-            _debounceTimer.Dispose();
-            if (_watcher != null)
+            lock (_sync)
             {
-                _watcher.EnableRaisingEvents = false;
-                _watcher.Dispose();
+                if (_disposed)
+                    return;
+                _disposed = true;
+
+                _debounceTimer.Dispose();
+                if (_watcher != null)
+                {
+                    _watcher.EnableRaisingEvents = false;
+                    _watcher.Dispose();
+                }
             }
         }
     }

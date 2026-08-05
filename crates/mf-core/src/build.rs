@@ -94,6 +94,15 @@ pub fn build_project(project_dir: &Path, output_dir: &Path) -> Result<BuildResul
         files_copied += copy_dir_recursive(&config_dir, &output_dir.join("config"))?;
     }
 
+    // 7. Write the build manifest (runtime version, project version, asset list)
+    let mut build_manifest = BuildManifest::new(
+        &manifest.project.runtime,
+        &manifest.project.name,
+        &manifest.project.version,
+    );
+    scan_assets(output_dir, &mut build_manifest)?;
+    build_manifest.write(output_dir)?;
+
     Ok(BuildResult {
         output_dir: output_dir.to_path_buf(),
         files_copied,
@@ -110,30 +119,15 @@ pub struct PackageResult {
     pub manifest: BuildManifest,
 }
 
-/// Build a project, write a build manifest, then archive the build dir.
+/// Build a project, then archive the build dir (manifest written by build_project).
 pub fn package_project(project_dir: &Path, output_dir: &Path) -> Result<PackageResult, MfError> {
-    // 1. Build first
+    // 1. Build first (writes build-manifest.json)
     let build_result = build_project(project_dir, output_dir)?;
 
-    // 2. Load the project manifest to read runtime + version
-    let content = std::fs::read_to_string(project_dir.join("mate.toml"))
-        .map_err(|e| MfError::Io(format!("failed to read mate.toml: {e}")))?;
-    let manifest = crate::parse_manifest(&content)?;
+    // 2. Load the manifest written by the build step
+    let build_manifest = BuildManifest::read(output_dir)?;
 
-    // 3. Build manifest with runtime version + project version
-    let mut build_manifest = BuildManifest::new(
-        &manifest.project.runtime,
-        &build_result.manifest,
-        &manifest.project.version,
-    );
-
-    // 4. Scan copied assets
-    scan_assets(output_dir, &mut build_manifest)?;
-
-    // 5. Write build manifest
-    build_manifest.write(output_dir)?;
-
-    // 6. Create archive. Stage it in a temp dir first — writing the archive
+    // 3. Create archive. Stage it in a temp dir first — writing the archive
     //    inside the dir being tar'd makes tar fail ("file changed as we read it").
     let archive_name = format!("{}.tar.gz", build_result.manifest);
     let archive_path = output_dir.join(&archive_name);
@@ -165,9 +159,10 @@ pub fn package_project(project_dir: &Path, output_dir: &Path) -> Result<PackageR
         )));
     }
 
-    std::fs::copy(&staged_archive, &archive_path)
-        .map_err(|e| MfError::Io(format!("failed to move archive: {e}")))?;
+    let copy_result = std::fs::copy(&staged_archive, &archive_path)
+        .map_err(|e| MfError::Io(format!("failed to move archive: {e}")));
     let _ = std::fs::remove_dir_all(&staging);
+    copy_result?;
 
     let archive_size = std::fs::metadata(&archive_path)
         .map(|m| m.len())
@@ -192,6 +187,12 @@ fn scan_assets(dir: &Path, manifest: &mut BuildManifest) -> Result<(), MfError> 
         if path.is_dir() {
             scan_assets(&path, manifest)?;
         } else {
+            // Skip the manifest itself and any archive from a previous
+            // package run — they are build artifacts, not project assets.
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name == "build-manifest.json" || name.ends_with(".tar.gz") {
+                continue;
+            }
             let rel = path.strip_prefix(dir).unwrap_or(&path);
             manifest.add_asset(rel.display().to_string());
         }
