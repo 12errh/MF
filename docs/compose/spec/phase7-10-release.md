@@ -1,14 +1,20 @@
 ---
 feature: phase7-10-release
-status: in-progress
+status: delivered
 updated: 2026-08-05
 branch: phase7-10-release
-commits: # filled at delivery
+commits: fc12be7..7e0dc1f
 ---
 
 # Phase 7-10: Build, DX, Hardening, Release
 
 ## Report
+
+**What was built** — The release pipeline for the Mate Framework CLI/core is now complete. `mf runtime install <version>` validates and stages a runtime version (`RuntimeVersion`/`InstallStatus`/`install_runtime`/`remove_runtime`), `mf build` writes a reproducible `build-manifest.json` (runtime version, project name/version, timestamp, asset list), and `mf package` produces a self-describing tar.gz via `package_project` (archive staged in a temp dir to avoid tar's "file changed as we read it" failure; re-package skips the prior archive). Error messages are actionable (`NoDisplayServer`, `RuntimeMissing`, `ModelNotFound`, `OllamaNotRunning`, `InvalidVersion`, `SecurityViolation`), `mf doctor` now checks runtime install, display server, and permissions with machine-readable JSON output, and CLI performance benchmarks exist for `mf --help`, `mf new`, `mf doctor`. Security validators (`validate_path` path-traversal, `validate_url` HTTPS-only) ship with a `SECURITY.md` audit checklist. On the Unity side, a `HotReloadHandler` watches config/assets via FileSystemWatcher with debounce (code files ignored per ADR-013). Release docs and automation are in place: `docs/getting-started.md`, `CHANGELOG.md`, an extended CI pipeline (unit + integration jobs), and a tag-triggered `release.yml`.
+
+**Verification** — `cargo test --workspace` PASS: 78 tests (62 mf-core, 13 mf bin, 3 integration), 0 failed; `cargo fmt --all -- --check` PASS; `cargo clippy --workspace --all-targets` PASS (0 warnings); `cargo bench -p mf --bench cli_benchmarks -- --test` PASS (mf_help/mf_new/mf_doctor all Success). Unity headless EditMode suite: 320 total, 286 passed, 34 failed — all 34 are PRE-EXISTING vendored UniGLTF/VRM/UniVRM10 failures (headless-incompatible), not this branch's code; `HotReloadHandlerTests` 6/6 pass. e2e: `mf build` writes `build/build-manifest.json`; `mf package` produces `demo.tar.gz`.
+
+**Journey log** — (1) The plan's `package_project` referenced `build_result.manifest_version` which doesn't exist on `BuildResult`; runtime version is read from the parsed `mate.toml` instead. (2) Writing the archive inside the directory being tar'd makes tar fail ("file changed as we read it") — the archive is staged in a temp dir (uniquely named with pid + nanos, since tests run in parallel in one process) then copied; re-package also nests the prior `.tar.gz`, so `scan_assets` skips archives and `build-manifest.json`. (3) The plan's `install_runtime("99.99.99")` error test contradicts its own `is_valid()` (valid semver), so the invalid-version test uses a non-semver string. (4) Unity tests compile into a separate editor assembly, so `internal` test seams (`ShouldWatch`/`TriggerReload`) had to be `public`. (5) Review found the CI integration job broken two ways (relative binary path after `cd`, and a manifest assertion after `mf build`); fixing it drove the decision to have `mf build` write the manifest, which also keeps the plan's exit criteria and docs accurate.
 
 ## [S1] Problem
 
@@ -78,6 +84,7 @@ This phase implements the full release story from the plan `docs/compose/plans/2
   - `display_server` check — env `XDG_SESSION_TYPE`/`XDG_CURRENT_DESKTOP`; missing → `warning` with "Set XDG_SESSION_TYPE" guidance.
   - `permissions` check — writability probe on project dir (create+remove temp file); failure → `warning`.
 - Expose `run_doctor(dir) -> Result<String, MfError>` (human) and `run_doctor_json(dir) -> Result<String, MfError>` returning the JSON payload string, so tests can call the logic without capturing stdout. CLI `run` prints the result.
+- The runtime check is a pure `check_runtime(installed, project_runtime)` helper so its guidance branches are testable without depending on the machine's real runtime cache.
 - Tests: manifest missing reported (ok result), JSON output parses as array/object, check names include manifest/runtime/assets/display_server/permissions (T32).
 
 ### P9.1 Performance benchmarks (`crates/mf-cli/benches/cli_benchmarks.rs`)
@@ -120,13 +127,13 @@ This phase implements the full release story from the plan `docs/compose/plans/2
 
 ## Tasks
 
-- [ ] T27: P7.1 RuntimeVersion/InstallStatus/install/remove + CLI install arg — acceptance: `cargo test -p mf-core -- runtime` + new tests pass, `mf runtime install 1.0.0` reports install guidance (covers: S2-P7.1)
-- [ ] T28: P7.2 BuildManifest — acceptance: `cargo test -p mf-core -- build_manifest` passes (covers: S2-P7.2)
-- [ ] T29: P7.3 package_project + scan_assets + CLI wiring — acceptance: `cargo test -p mf-core -- package` passes, `mf package` writes build-manifest.json (covers: S2-P7.3; depends: T27, T28)
-- [ ] T30: P8.1 HotReloadHandler + tests (Unity) — acceptance: headless EditMode run shows HotReloadHandlerTests 4 pass (covers: S2-P8.1)
-- [ ] T31: P8.2 error variants — acceptance: `cargo test -p mf-core -- error` passes (covers: S2-P8.2)
-- [ ] T32: P8.3 doctor runtime/display/permissions + run_doctor/run_doctor_json — acceptance: `cargo test -p mf-cli -- doctor` passes (covers: S2-P8.3; depends: T31)
-- [ ] T33: P9.1 criterion benches — acceptance: `cargo bench -p mf-cli -- --test` runs green (covers: S2-P9.1)
-- [ ] T34: P9.2 security.rs + SECURITY.md — acceptance: `cargo test -p mf-core -- security` passes, SECURITY.md committed (covers: S2-P9.2; depends: T31)
-- [ ] T35: P10.1 getting-started.md — acceptance: file exists with install/create/config/run/build sections (covers: S2-P10.1)
-- [ ] T36: P10.2 ci.yml integration job + release.yml + CHANGELOG.md — acceptance: workflows valid YAML, CHANGELOG present (covers: S2-P10.2)
+- [x] T27: P7.1 RuntimeVersion/InstallStatus/install/remove + CLI install arg — acceptance: `cargo test -p mf-core -- runtime` + new tests pass, `mf runtime install 1.0.0` reports install guidance (covers: S2-P7.1)
+- [x] T28: P7.2 BuildManifest — acceptance: `cargo test -p mf-core -- build_manifest` passes (covers: S2-P7.2)
+- [x] T29: P7.3 package_project + scan_assets + CLI wiring — acceptance: `cargo test -p mf-core -- package` passes, `mf package` writes build-manifest.json (covers: S2-P7.3; depends: T27, T28)
+- [x] T30: P8.1 HotReloadHandler + tests (Unity) — acceptance: headless EditMode run shows HotReloadHandlerTests 4 pass (covers: S2-P8.1)
+- [x] T31: P8.2 error variants — acceptance: `cargo test -p mf-core -- error` passes (covers: S2-P8.2)
+- [x] T32: P8.3 doctor runtime/display/permissions + run_doctor/run_doctor_json — acceptance: `cargo test -p mf-cli -- doctor` passes (covers: S2-P8.3; depends: T31)
+- [x] T33: P9.1 criterion benches — acceptance: `cargo bench -p mf-cli -- --test` runs green (covers: S2-P9.1)
+- [x] T34: P9.2 security.rs + SECURITY.md — acceptance: `cargo test -p mf-core -- security` passes, SECURITY.md committed (covers: S2-P9.2; depends: T31)
+- [x] T35: P10.1 getting-started.md — acceptance: file exists with install/create/config/run/build sections (covers: S2-P10.1)
+- [x] T36: P10.2 ci.yml integration job + release.yml + CHANGELOG.md — acceptance: workflows valid YAML, CHANGELOG present (covers: S2-P10.2)
