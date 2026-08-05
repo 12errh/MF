@@ -19,7 +19,7 @@ namespace Mate.Core
 
         private FileSystemWatcher _watcher;
         private DateTime _lastReloadTime;
-        private bool _disposed;
+        private volatile bool _disposed;
 
         private static readonly string[] WatchedExtensions =
             { ".toml", ".json", ".vrm", ".wav", ".mp3", ".anim" };
