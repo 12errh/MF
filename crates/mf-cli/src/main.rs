@@ -48,7 +48,10 @@ enum RuntimeCommands {
     /// Show runtime status
     Status,
     /// Install a runtime version
-    Install,
+    Install {
+        /// Version to install (e.g. 1.0.0)
+        version: Option<String>,
+    },
 }
 
 fn main() -> anyhow::Result<()> {
@@ -62,9 +65,13 @@ fn main() -> anyhow::Result<()> {
             let subcmd = match &command {
                 RuntimeCommands::List => "list",
                 RuntimeCommands::Status => "status",
-                RuntimeCommands::Install => "install",
+                RuntimeCommands::Install { .. } => "install",
             };
-            commands::runtime::run(subcmd, cli.json)
+            let version = match &command {
+                RuntimeCommands::Install { version } => version.as_deref(),
+                _ => None,
+            };
+            commands::runtime::run(subcmd, version, cli.json)
         }
         Commands::Build { output } => commands::build::run(output.as_deref(), cli.json),
         Commands::Package => commands::package::run(cli.json),

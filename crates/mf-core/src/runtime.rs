@@ -10,6 +10,85 @@ pub fn runtime_cache_dir() -> PathBuf {
     PathBuf::from(home).join(".mate-framework").join("runtimes")
 }
 
+/// A specific runtime version identified by its semantic version string.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RuntimeVersion(pub String);
+
+/// Installation state of a runtime version on disk.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum InstallStatus {
+    NotInstalled,
+    Downloading,
+    Installed,
+    Incomplete,
+}
+
+impl RuntimeVersion {
+    /// Directory where this version's files live in the cache.
+    pub fn cache_dir(&self) -> PathBuf {
+        runtime_cache_dir().join(&self.0)
+    }
+
+    /// Installation state based on the presence of the player binary.
+    pub fn status(&self) -> InstallStatus {
+        let dir = self.cache_dir();
+        if !dir.exists() {
+            return InstallStatus::NotInstalled;
+        }
+        if dir.join("MateRuntime").join("MateRuntime").exists() {
+            InstallStatus::Installed
+        } else {
+            InstallStatus::Incomplete
+        }
+    }
+
+    /// Whether the version string is a valid semantic version.
+    pub fn is_valid(&self) -> bool {
+        Version::parse(&self.0).is_ok()
+    }
+
+    /// Download URL for the runtime tarball on GitHub Releases.
+    pub fn download_url(&self) -> String {
+        format!(
+            "https://github.com/mate-framework/mate-runtime/releases/download/v{}/MateRuntime-linux-x64.tar.gz",
+            self.0
+        )
+    }
+
+    /// Remove this version's directory from the cache. No-op if not installed.
+    pub fn remove(&self) -> Result<(), MfError> {
+        let dir = self.cache_dir();
+        if dir.exists() {
+            std::fs::remove_dir_all(&dir).map_err(|e| {
+                MfError::Io(format!("failed to remove runtime {}: {}", self.0, e))
+            })?;
+        }
+        Ok(())
+    }
+}
+
+/// Ensure a runtime version is available, installing it if needed.
+/// Actual download is deferred until releases are published; this validates
+/// the version and returns its cache directory.
+pub fn install_runtime(version: &str) -> Result<PathBuf, MfError> {
+    let rv = RuntimeVersion(version.to_string());
+
+    if rv.status() == InstallStatus::Installed {
+        return Ok(rv.cache_dir());
+    }
+
+    if !rv.is_valid() {
+        return Err(MfError::InvalidVersion(version.to_string()));
+    }
+
+    Ok(rv.cache_dir())
+}
+
+/// Remove an installed runtime version.
+pub fn remove_runtime(version: &str) -> Result<(), MfError> {
+    RuntimeVersion(version.to_string()).remove()
+}
+
 /// Path to a specific runtime version.
 pub fn runtime_path(version: &str) -> PathBuf {
     runtime_cache_dir().join(version)
@@ -143,5 +222,56 @@ mod tests {
         }
         let result = resolve_version_in(tmp.path(), "missing");
         assert_eq!(result, Ok("1.10.0".into()));
+    }
+
+    // ---- RuntimeVersion / InstallStatus / install / remove ----
+
+    #[test]
+    fn version_status_not_installed_for_missing() {
+        let v = RuntimeVersion("99.99.99".into());
+        assert_eq!(v.status(), InstallStatus::NotInstalled);
+    }
+
+    #[test]
+    fn version_cache_dir_path() {
+        let v = RuntimeVersion("1.0.0".into());
+        let dir = v.cache_dir();
+        assert!(dir.to_string_lossy().contains("1.0.0"));
+        assert!(dir.to_string_lossy().contains(".mate-framework"));
+    }
+
+    #[test]
+    fn version_download_url() {
+        let v = RuntimeVersion("1.0.0".into());
+        let url = v.download_url();
+        assert!(url.contains("github.com"));
+        assert!(url.contains("v1.0.0"));
+        assert!(url.contains("MateRuntime-linux-x64.tar.gz"));
+    }
+
+    #[test]
+    fn version_remove_nonexistent_is_ok() {
+        let v = RuntimeVersion("99.99.99".into());
+        assert!(v.remove().is_ok());
+    }
+
+    #[test]
+    fn version_invalid_semver_is_not_valid() {
+        assert!(!RuntimeVersion("not-a-version".into()).is_valid());
+        assert!(RuntimeVersion("1.2.3".into()).is_valid());
+    }
+
+    #[test]
+    fn install_runtime_invalid_version_returns_error() {
+        let result = install_runtime("not-a-version");
+        match result {
+            Err(MfError::InvalidVersion(v)) => assert_eq!(v, "not-a-version"),
+            other => panic!("expected InvalidVersion, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn remove_runtime_nonexistent_is_ok() {
+        assert!(remove_runtime("99.99.99").is_ok());
     }
 }
