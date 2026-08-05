@@ -73,11 +73,13 @@ namespace Mate.Audio
 
         public void Poll()
         {
-            foreach (var nodeId in _monitoredNodes)
+            // Iterate a snapshot so a subscriber mutating monitoring state during
+            // delivery cannot invalidate the enumeration.
+            foreach (var nodeId in _monitoredNodes.ToArray())
             {
                 float level = _pulseAudio.GetPeakLevel((uint)nodeId);
-                OnPeakLevelChanged?.Invoke(nodeId, level);
                 _eventBus.Publish(new AudioPeakEvent(nodeId, level));
+                OnPeakLevelChanged?.Invoke(nodeId, level);
             }
         }
     }
