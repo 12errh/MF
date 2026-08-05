@@ -4,6 +4,9 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/MateFramework/Scenes/Bootstrap.unity
+    guid: 3a1c09d72a65dc58c954e310a67e4de6
   m_configObjects: {}
   m_UseUCBPForAssetBundles: 0
