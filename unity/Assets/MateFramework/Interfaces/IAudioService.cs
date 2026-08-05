@@ -13,6 +13,8 @@ namespace Mate.Interfaces
         bool IsAllowedApp(string appName);
         void StartMonitoring(int nodeId);
         void StopMonitoring(int nodeId);
+        /// <summary>Read current peaks for monitored nodes and publish AudioPeakEvent.</summary>
+        void Poll();
         event Action<int, float> OnPeakLevelChanged;
     }
 

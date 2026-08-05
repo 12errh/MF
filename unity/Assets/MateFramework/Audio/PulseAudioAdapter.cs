@@ -36,9 +36,15 @@ namespace Mate.Audio
 
         public float GetPeakLevel(uint nodeId)
         {
-            // The monolith exposes peak levels through its monitoring callback.
-            // When not monitoring or PulseAudio is unavailable, this returns 0.
-            return 0f;
+            // The monolith exposes peak levels through its monitoring callback in
+            // ProgramPeaks (populated by StartMonitoringStream's read callback).
+            if (_manager == null)
+                return 0f;
+
+            // -1 is the sentinel the monolith writes before the first peak sample.
+            return _manager.ProgramPeaks.TryGetValue(nodeId, out var peak) && peak >= 0f
+                ? peak
+                : 0f;
         }
     }
 }

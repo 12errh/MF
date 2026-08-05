@@ -117,6 +117,53 @@ public class AudioServiceTests
         Assert.IsFalse(svc.IsMonitoring);
     }
 
+    [Test]
+    public void AudioService_Poll_PublishesPeakEvent_ForMonitoredNode()
+    {
+        _pulse.PeakLevel = 0.5f;
+        var bus = _ctx.Resolve<IEventBus>();
+        bool eventFired = false;
+        int eventNode = -1;
+        float eventLevel = 0f;
+        bus.Subscribe<AudioPeakEvent>(e => { eventFired = true; eventNode = e.NodeId; eventLevel = e.Level; });
+
+        var svc = new PulseAudioService(_ctx.Resolve<IConfiguration>(), bus, _pulse);
+        svc.StartMonitoring(7);
+        svc.Poll();
+
+        Assert.IsTrue(eventFired);
+        Assert.AreEqual(7, eventNode);
+        Assert.AreEqual(0.5f, eventLevel, 0.001f);
+    }
+
+    [Test]
+    public void AudioService_Poll_DoesNotPublish_ForUnmonitoredNode()
+    {
+        _pulse.PeakLevel = 0.5f;
+        var bus = _ctx.Resolve<IEventBus>();
+        bool eventFired = false;
+        bus.Subscribe<AudioPeakEvent>(_ => eventFired = true);
+
+        var svc = new PulseAudioService(_ctx.Resolve<IConfiguration>(), bus, _pulse);
+        svc.Poll();
+
+        Assert.IsFalse(eventFired);
+    }
+
+    [Test]
+    public void AudioService_Poll_FiresOnPeakLevelChanged()
+    {
+        _pulse.PeakLevel = 0.6f;
+        var svc = new PulseAudioService(_ctx.Resolve<IConfiguration>(), _ctx.Resolve<IEventBus>(), _pulse);
+        svc.StartMonitoring(1);
+
+        bool fired = false;
+        svc.OnPeakLevelChanged += (node, level) => { fired = true; };
+        svc.Poll();
+
+        Assert.IsTrue(fired);
+    }
+
     private class FakePulseAudio : IPulseAudio
     {
         public float PeakLevel;

@@ -70,5 +70,15 @@ namespace Mate.Audio
         {
             _monitoredNodes.Remove(nodeId);
         }
+
+        public void Poll()
+        {
+            foreach (var nodeId in _monitoredNodes)
+            {
+                float level = _pulseAudio.GetPeakLevel((uint)nodeId);
+                OnPeakLevelChanged?.Invoke(nodeId, level);
+                _eventBus.Publish(new AudioPeakEvent(nodeId, level));
+            }
+        }
     }
 }

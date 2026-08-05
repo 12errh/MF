@@ -96,6 +96,39 @@ public class AudioReactiveBridgeTests
         Assert.IsFalse(danceTriggered);
     }
 
+    [Test]
+    public void Bridge_EndToEnd_ServicePoll_TriggersDance()
+    {
+        // Full pipeline: PulseAudioService.Poll publishes AudioPeakEvent above
+        // threshold, which the bridge converts into DanceStartedEvent.
+        var bus = new SimpleEventBus();
+        var config = new MockConfig();
+        config.Set("soundThreshold", 0.3f);
+        config.Set("allowedApps", "spotify");
+
+        var fakePulse = new FakePulseAudio { PeakLevel = 0.5f };
+        var service = new PulseAudioService(config, bus, fakePulse);
+        var bridge = new AudioReactiveBridge(bus, config);
+
+        bool danceTriggered = false;
+        bus.Subscribe<DanceStartedEvent>(_ => danceTriggered = true);
+
+        service.StartMonitoring(1);
+        service.Poll();
+
+        Assert.IsTrue(danceTriggered);
+    }
+
+    private class FakePulseAudio : IPulseAudio
+    {
+        public float PeakLevel;
+
+        public System.Collections.Generic.List<AudioProgramInfo> GetPlayingPrograms() =>
+            new System.Collections.Generic.List<AudioProgramInfo>();
+
+        public float GetPeakLevel(uint nodeId) => PeakLevel;
+    }
+
     private class MockConfig : IConfiguration
     {
         private readonly Dictionary<string, object> _v = new();

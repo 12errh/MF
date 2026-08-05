@@ -31,7 +31,7 @@ namespace Mate.AI
             {
                 try
                 {
-                    var response = _client.GetAsync($"{_baseUrl}/api/tags").Result;
+                    using var response = _client.GetAsync($"{_baseUrl}/api/tags").Result;
                     return response.IsSuccessStatusCode;
                 }
                 catch
@@ -58,12 +58,11 @@ namespace Mate.AI
 
         public Task<Result<string>> SendMessage(string message, CancellationToken ct = default)
         {
-            var history = new[]
-            {
-                new ChatMessage("system", _systemPrompt),
-                new ChatMessage("user", message),
-            };
-            return SendMessageWithHistory(history, ct);
+            var history = new List<ChatMessage>();
+            if (!string.IsNullOrEmpty(_systemPrompt))
+                history.Add(new ChatMessage("system", _systemPrompt));
+            history.Add(new ChatMessage("user", message));
+            return SendMessageWithHistory(history.ToArray(), ct);
         }
 
         public async Task<Result<string>> SendMessageWithHistory(ChatMessage[] history, CancellationToken ct = default)

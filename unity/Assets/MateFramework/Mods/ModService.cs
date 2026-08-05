@@ -23,6 +23,7 @@ namespace Mate.Mods
         public async Task<Result> LoadMods(string modsPath)
         {
             _modsPath = modsPath;
+            _mods.Clear();
             return await ScanMods();
         }
 
