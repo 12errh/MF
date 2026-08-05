@@ -33,18 +33,11 @@ fn run_install(version: Option<&str>, json: bool) -> anyhow::Result<()> {
                     "{}",
                     serde_json::json!({
                         "status": "not_implemented",
-                        "message": "automatic runtime download will be available when releases are published; pass a version, e.g. `mf runtime install 1.0.0`"
+                        "message": "pass a version to download, e.g. `mf runtime install 1.0.0`"
                     })
                 );
             } else {
-                println!(
-                    "Automatic runtime download will be available when releases are published."
-                );
-                println!(
-                    "For now, manually place the runtime at: {}",
-                    runtime_path("1.0.0").display()
-                );
-                println!("Or pass a version to stage it: `mf runtime install 1.0.0`");
+                println!("Pass a version to download, e.g. `mf runtime install 1.0.0`");
             }
             Ok(())
         }

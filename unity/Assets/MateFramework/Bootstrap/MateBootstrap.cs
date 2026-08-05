@@ -71,10 +71,20 @@ namespace Mate.Bootstrap
 
         private static void EnsureVrmLoader()
         {
-            if (UnityEngine.Object.FindFirstObjectByType<VRMLoader>() == null)
+            var loader = UnityEngine.Object.FindFirstObjectByType<VRMLoader>();
+            if (loader == null)
             {
                 var go = new GameObject("VRMLoader");
-                go.AddComponent<VRMLoader>();
+                loader = go.AddComponent<VRMLoader>();
+            }
+            // The grabbed VRMLoader parents loaded models under customModelOutput
+            // (FinalizeLoadedModel). The minimal bootstrap scene has no such node,
+            // so create one under the loader to avoid a null reference on load.
+            if (loader.customModelOutput == null)
+            {
+                var output = new GameObject("CustomModelOutput");
+                output.transform.SetParent(loader.transform, false);
+                loader.customModelOutput = output;
             }
         }
 

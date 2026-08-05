@@ -12,6 +12,9 @@ thiserror = { workspace = true }
 semver = "1"
 notify = "6"
 chrono = "0.4"
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "rustls-tls"] }
+tar = "0.4"
+flate2 = "1"
 
 [dev-dependencies]
 tempfile = "3"

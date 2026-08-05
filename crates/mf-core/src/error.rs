@@ -30,6 +30,9 @@ pub enum MfError {
     #[error("security violation: {0}")]
     SecurityViolation(String),
 
+    #[error("download failed for {url}: HTTP {status}")]
+    DownloadFailed { url: String, status: u16 },
+
     #[error("Unity player crashed with exit code {code}")]
     UnityCrashed { code: i32 },
 
@@ -113,5 +116,16 @@ mod tests {
     fn error_security_violation_has_reason() {
         let msg = MfError::SecurityViolation("path escapes project".into()).to_string();
         assert!(msg.contains("path escapes project"));
+    }
+
+    #[test]
+    fn error_download_failed_has_url_and_status() {
+        let msg = MfError::DownloadFailed {
+            url: "https://example.com/x.tar.gz".into(),
+            status: 404,
+        }
+        .to_string();
+        assert!(msg.contains("https://example.com/x.tar.gz"));
+        assert!(msg.contains("404"));
     }
 }

@@ -2,6 +2,7 @@ use std::path::{Path, PathBuf};
 
 use semver::Version;
 
+use crate::security::validate_url;
 use crate::MfError;
 
 /// Where runtimes are cached on disk.
@@ -9,6 +10,12 @@ pub fn runtime_cache_dir() -> PathBuf {
     let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".into());
     PathBuf::from(home).join(".mate-framework").join("runtimes")
 }
+
+/// GitHub repo that hosts runtime player releases.
+pub const RUNTIME_RELEASE_REPO: &str = "12errh/MF";
+
+/// Filename of the runtime tarball attached to each release.
+pub const RUNTIME_ARCHIVE: &str = "MateRuntime-linux-x64.tar.gz";
 
 /// A specific runtime version identified by its semantic version string.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -50,8 +57,8 @@ impl RuntimeVersion {
     /// Download URL for the runtime tarball on GitHub Releases.
     pub fn download_url(&self) -> String {
         format!(
-            "https://github.com/mate-framework/mate-runtime/releases/download/v{}/MateRuntime-linux-x64.tar.gz",
-            self.0
+            "https://github.com/{RUNTIME_RELEASE_REPO}/releases/download/v{}/{}",
+            self.0, RUNTIME_ARCHIVE
         )
     }
 
@@ -67,8 +74,8 @@ impl RuntimeVersion {
 }
 
 /// Ensure a runtime version is available, installing it if needed.
-/// Actual download is deferred until releases are published; this validates
-/// the version and returns its cache directory.
+/// Downloads the release tarball, extracts it into the cache, and verifies
+/// the player binary landed in the expected layout.
 pub fn install_runtime(version: &str) -> Result<PathBuf, MfError> {
     let rv = RuntimeVersion(version.to_string());
 
@@ -80,7 +87,67 @@ pub fn install_runtime(version: &str) -> Result<PathBuf, MfError> {
         return Err(MfError::InvalidVersion(version.to_string()));
     }
 
-    Ok(rv.cache_dir())
+    let url = rv.download_url();
+    validate_url(&url)?;
+
+    let cache = rv.cache_dir();
+    // Stage the archive next to the cache dir so a failed install leaves no
+    // partial version directory behind.
+    let archive = cache_dir_tmp(cache.parent().unwrap_or(Path::new("/tmp")), &rv.0);
+    download(&url, &archive)?;
+    extract(&archive, &cache)?;
+    let _ = std::fs::remove_file(&archive);
+
+    if rv.status() != InstallStatus::Installed {
+        return Err(MfError::Io(format!(
+            "runtime v{version} downloaded but player binary not found at {}",
+            player_path(version).display()
+        )));
+    }
+
+    Ok(cache)
+}
+
+/// Download `url` into `dest` with a blocking HTTP client, following redirects.
+fn download(url: &str, dest: &Path) -> Result<(), MfError> {
+    let response = reqwest::blocking::Client::new()
+        .get(url)
+        .send()
+        .map_err(|e| MfError::Io(format!("failed to download {url}: {e}")))?;
+
+    let status = response.status();
+    if !status.is_success() {
+        return Err(MfError::DownloadFailed {
+            url: url.to_string(),
+            status: status.as_u16(),
+        });
+    }
+
+    let mut file = std::fs::File::create(dest)
+        .map_err(|e| MfError::Io(format!("failed to create {}: {e}", dest.display())))?;
+    let mut body = response;
+    std::io::copy(&mut body, &mut file)
+        .map_err(|e| MfError::Io(format!("failed to write {}: {e}", dest.display())))?;
+    Ok(())
+}
+
+/// Extract a gzip tarball into `dest`, creating it if needed.
+fn extract(archive: &Path, dest: &Path) -> Result<(), MfError> {
+    std::fs::create_dir_all(dest)
+        .map_err(|e| MfError::Io(format!("failed to create {}: {e}", dest.display())))?;
+
+    let file = std::fs::File::open(archive)
+        .map_err(|e| MfError::Io(format!("failed to open {}: {e}", archive.display())))?;
+    let gz = flate2::read::GzDecoder::new(file);
+    let mut tar = tar::Archive::new(gz);
+    tar.unpack(dest)
+        .map_err(|e| MfError::Io(format!("failed to extract {}: {e}", archive.display())))?;
+    Ok(())
+}
+
+/// Temp archive path in `dir`, unique per version.
+fn cache_dir_tmp(dir: &Path, version: &str) -> PathBuf {
+    dir.join(format!(".{version}.{}.tar.gz", std::process::id()))
 }
 
 /// Remove an installed runtime version.
@@ -244,6 +311,7 @@ mod tests {
         let v = RuntimeVersion("1.0.0".into());
         let url = v.download_url();
         assert!(url.contains("github.com"));
+        assert!(url.contains("12errh/MF"));
         assert!(url.contains("v1.0.0"));
         assert!(url.contains("MateRuntime-linux-x64.tar.gz"));
     }
