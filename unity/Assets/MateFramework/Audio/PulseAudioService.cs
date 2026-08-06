@@ -71,6 +71,20 @@ namespace Mate.Audio
             _monitoredNodes.Remove(nodeId);
         }
 
+        /// <summary>
+        /// Discover playing audio programs and start monitoring the nodes of any
+        /// that are in the allowed-apps list. This is what actually populates
+        /// _monitoredNodes so Poll() has nodes to read peaks from.
+        /// </summary>
+        public void DiscoverAndMonitor()
+        {
+            foreach (var program in _pulseAudio.GetPlayingPrograms())
+            {
+                if (IsAllowedApp(program.Name) || IsAllowedApp(program.ProcessName))
+                    StartMonitoring((int)program.NodeId);
+            }
+        }
+
         public void Poll()
         {
             // Iterate a snapshot so a subscriber mutating monitoring state during

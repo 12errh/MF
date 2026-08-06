@@ -29,7 +29,7 @@ namespace Mate.Audio
             {
                 if (programs == null) return;
                 result.AddRange(programs.Select(p => new AudioProgramInfo(
-                    p.Name, p.ProcessName, p.ProcessId, p.Volume)));
+                    p.Name, p.ProcessName, p.ProcessId, p.Volume, p.NodeId)));
             });
             return result;
         }
