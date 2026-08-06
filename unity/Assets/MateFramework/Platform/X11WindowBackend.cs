@@ -263,11 +263,12 @@ namespace Mate.Platform
             if (_display == IntPtr.Zero || _unityWindow == IntPtr.Zero) return false;
             if (value)
             {
-                if (_shapingRunning) return true;
                 // Reset to a full bounding shape first so input works immediately.
                 var fullRect = new[] { new XRectangle { Width = (ushort)Screen.width, Height = (ushort)Screen.height } };
                 XShapeCombineRectangles(_display, _unityWindow, ShapeInput, 0, 0, fullRect, 1, ShapeSet, Unsorted);
                 _shapingRequested = true;
+                if (_shapingRunning) return true;
+
                 _shapingRunning = true;
                 _shapingThread = new global::System.Threading.Thread(ShapingLoop)
                 {
@@ -279,8 +280,14 @@ namespace Mate.Platform
             }
             else
             {
+                // Stop the shaping thread and restore a full input rectangle so the
+                // window accepts input everywhere.
                 _shapingRequested = false;
-                // Restore a full input rectangle so the window accepts input everywhere.
+                _shapingRunning = false;
+                if (_shapingThread is { IsAlive: true })
+                    _shapingThread.Join(500);
+                _shapingThread = null;
+
                 var fullRect = new[] { new XRectangle { X = 0, Y = 0, Width = ushort.MaxValue, Height = ushort.MaxValue } };
                 XShapeCombineRectangles(_display, _unityWindow, ShapeInput, 0, 0, fullRect, 1, ShapeSet, Unsorted);
                 XFlush(_display);
@@ -319,9 +326,14 @@ namespace Mate.Platform
 
             try
             {
-                var data = new byte[attrs.width * attrs.height * 4];
-                Marshal.Copy(Marshal.ReadIntPtr(img, 0), data, 0, data.Length);
-                var rects = GenerateRectangles(data, attrs.width, attrs.height);
+                // XImage.data lives at a fixed offset (after width, height, xoffset,
+                // format); read the struct rather than dereferencing byte 0.
+                var ximg = Marshal.PtrToStructure<XImage>(img);
+                if (ximg.data == IntPtr.Zero) return;
+                var bytesPerLine = ximg.bytes_per_line > 0 ? ximg.bytes_per_line : attrs.width * 4;
+                var data = new byte[bytesPerLine * attrs.height];
+                Marshal.Copy(ximg.data, data, 0, data.Length);
+                var rects = GenerateRectangles(data, attrs.width, attrs.height, bytesPerLine);
                 XShapeCombineRectangles(_display, _unityWindow, ShapeInput, 0, 0, rects, rects.Length, ShapeSet, YSorted);
                 XFlush(_display);
             }
@@ -331,17 +343,18 @@ namespace Mate.Platform
             }
         }
 
-        private XRectangle[] GenerateRectangles(byte[] data, int width, int height)
+        private XRectangle[] GenerateRectangles(byte[] data, int width, int height, int bytesPerLine)
         {
             var rects = new List<XRectangle>();
             for (short y = 0; y < height; y++)
             {
+                int rowBase = y * bytesPerLine;
                 for (short x = 0; x < width; x++)
                 {
-                    int idx = (y * width + x) * 4;
+                    int idx = rowBase + x * 4;
                     if (data[idx + 3] <= ShapeThreshold) continue;
                     short startX = x;
-                    while (x < width && data[(y * width + x) * 4 + 3] > ShapeThreshold)
+                    while (x < width && data[rowBase + x * 4 + 3] > ShapeThreshold)
                         x++;
                     rects.Add(new XRectangle { X = startX, Y = y, Width = (ushort)(x - startX), Height = 1 });
                 }
@@ -422,9 +435,10 @@ namespace Mate.Platform
                     out var actualType, out var actualFormat, out var nItems, out _, out var prop);
                 if (status == 0 && actualType == (IntPtr)XaWindow && actualFormat == 32 && prop != IntPtr.Zero)
                 {
+                    // _NET_CLIENT_LIST items are format-32 (4-byte XIDs).
                     for (ulong i = 0; i < nItems; i++)
                     {
-                        var w = Marshal.ReadIntPtr(prop, (int)(i * (ulong)IntPtr.Size));
+                        var w = new IntPtr(Marshal.ReadInt32(prop, (int)(i * 4)));
                         if (IsWindowVisible(w)) result.Add(w);
                     }
                     XFree(prop);
@@ -574,6 +588,22 @@ namespace Mate.Platform
         {
             public IntPtr res_name;
             public IntPtr res_class;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct XImage
+        {
+            public int width, height;
+            public int xoffset;
+            public int format;
+            public IntPtr data;
+            public int byte_order;
+            public int bitmap_unit;
+            public int bitmap_bit_order;
+            public int bitmap_pad;
+            public int depth;
+            public int bytes_per_line;
+            public int bits_per_pixel;
         }
 
         [StructLayout(LayoutKind.Sequential)]
