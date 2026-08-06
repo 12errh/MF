@@ -1,6 +1,8 @@
 using System;
+using System.IO;
 using Mate.Audio;
 using Mate.Character;
+using Mate.Character.Tracking;
 using Mate.Core;
 using Mate.Interfaces;
 using PulseAudio;
@@ -21,6 +23,7 @@ namespace Mate.Bootstrap
         private IAudioService _audio;
         private IMouseTracker _mouse;
         private IWindowService _window;
+        private MouseTrackingApplier _trackingApplier;
 
         /// <summary>The composed service container (null until Awake).</summary>
         public MateContext Context => _ctx;
@@ -38,6 +41,14 @@ namespace Mate.Bootstrap
             _mouse = _ctx.Resolve<IMouseTracker>();
             _window = _ctx.Resolve<IWindowService>();
 
+            // Drive the cursor-tracking applier so the character's head/spine
+            // follow the mouse (MouseTracker computes blends; this applies them).
+            _trackingApplier = gameObject.AddComponent<MouseTrackingApplier>();
+            _trackingApplier.Bind(
+                _ctx.Resolve<IConfiguration>(),
+                _mouse,
+                _ctx.Resolve<ICharacterService>());
+
             // Apply mate.toml [window] settings (always-on-top, borderless,
             // click-through, window type, position) to the native window.
             // The handle is IntPtr.Zero: the X11 backend locates the player
@@ -48,6 +59,23 @@ namespace Mate.Bootstrap
             if (!global::System.IO.Directory.Exists(projectDir))
                 projectDir = Application.dataPath;
 
+            // Begin monitoring allowed audio apps so Poll() has nodes to read.
+            _audio.DiscoverAndMonitor();
+
+            // Show the system tray icon (config-driven icon + tooltip).
+            var system = _ctx.Resolve<ISystemService>();
+            var iconPath = _ctx.Resolve<IConfiguration>().GetString("trayIcon", string.Empty);
+            var tooltip = _ctx.Resolve<IConfiguration>().GetString("trayTooltip", "My Mate");
+            _ = system.ShowTrayIcon(iconPath, tooltip);
+
+            // Load mods (config + asset overrides; no code execution in v1).
+            var mods = _ctx.Resolve<IModService>();
+            var modsPath = _ctx.Resolve<IConfiguration>().GetString("modsPath", "mods/");
+            var modsFullPath = Path.IsPathRooted(modsPath)
+                ? modsPath
+                : Path.Combine(projectDir, modsPath);
+            _ = mods.LoadMods(modsFullPath);
+
             _ = BootstrapComposer.LoadConfiguredModelAsync(_ctx, projectDir);
         }
 
@@ -57,6 +85,7 @@ namespace Mate.Bootstrap
                 _audio.Poll();
             if (_mouse != null)
                 _mouse.Update();
+            // MouseTrackingApplier runs its own Update() each frame.
         }
 
         private void OnDestroy()

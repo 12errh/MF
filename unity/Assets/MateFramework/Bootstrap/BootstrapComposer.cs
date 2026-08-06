@@ -26,6 +26,7 @@ namespace Mate.Bootstrap
             public IVrmLoader VrmLoader;
             public IPulseAudio PulseAudio;
             public IWindowBackend WindowBackend;
+            public INativeTray NativeTray;
         }
 
         /// <summary>Compose a fully wired MateContext for a project directory.</summary>
@@ -54,9 +55,23 @@ namespace Mate.Bootstrap
             ctx.RegisterSingleton<IModService>(new ModService());
             ctx.RegisterSingleton<IWindowService>(new WindowService(windowBackend, config));
 
+            // Native tray + notification consumer: forwards the events published
+            // by SystemTrayService to the AppIndicator/notify-send layer.
+            var nativeTray = adapters?.NativeTray ?? new LinuxNativeTray();
+            ctx.RegisterSingleton<INativeTray>(nativeTray);
+            ctx.RegisterSingleton<SystemTrayReaction>(new SystemTrayReaction(bus, nativeTray));
+
             // Cross-module bridge: audio peaks trigger dance events. Registered
             // so MateContext.Dispose runs its IDisposable.Dispose (unsubscribe).
             ctx.RegisterSingleton<AudioReactiveBridge>(new AudioReactiveBridge(bus, config));
+
+            // Dance consumer: turns DanceStartedEvent/DanceStoppedEvent into
+            // animator transitions on the loaded model. The driver resolves the
+            // model's Animator lazily so it works with async model loading.
+            var character = ctx.Resolve<ICharacterService>();
+            ctx.RegisterSingleton<IAnimatorDriver>(new ModelAnimatorDriver(character));
+            ctx.RegisterSingleton<DanceReaction>(new DanceReaction(
+                bus, config, ctx.Resolve<IAnimatorDriver>()));
 
             return ctx;
         }
