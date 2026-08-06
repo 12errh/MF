@@ -28,6 +28,11 @@ impl RuntimeProcess {
         let mut cmd = std::process::Command::new(&config.player_path);
         cmd.arg("--projectPath").arg(&config.project_dir);
         cmd.args(&config.project_args);
+        // A transparent window requires the player to open on a 32-bit ARGB
+        // visual; SDL_VIDEO_X11_VISUALID must be set before the window is
+        // created. Detect it from the running X server (glxinfo first, then
+        // xdpyinfo) unless the caller already chose one.
+        apply_argb_visual(&mut cmd);
         cmd.stdin(Stdio::null());
         cmd.stdout(Stdio::piped());
         cmd.stderr(Stdio::piped());
@@ -68,6 +73,53 @@ pub fn build_launch_config(player_path: PathBuf, project_dir: PathBuf) -> Runtim
         project_dir,
         project_args: Vec::new(),
     }
+}
+
+/// If SDL_VIDEO_X11_VISUALID is not already set, detect a 32-bit ARGB visual
+/// from the running X server and set it on the child command's environment.
+/// Unity reads this before creating its window, which is required for a
+/// transparent background.
+fn apply_argb_visual(cmd: &mut std::process::Command) {
+    if std::env::var("SDL_VIDEO_X11_VISUALID").is_ok() {
+        return;
+    }
+    if let Some(visual) = detect_argb_visual() {
+        cmd.env("SDL_VIDEO_X11_VISUALID", visual);
+    }
+}
+
+/// Find a 32-bit ARGB visual id. Tries glxinfo first (the reference's
+/// launch.sh does the same), then falls back to xdpyinfo's 32-plane visuals.
+/// The id is returned with its 0x prefix, matching what SDL expects.
+fn detect_argb_visual() -> Option<String> {
+    if let Ok(out) = std::process::Command::new("glxinfo").output() {
+        let text = String::from_utf8_lossy(&out.stdout);
+        if let Some(line) = text.lines().find(|l| l.contains("32 tc") && l.contains("8  8  8  8"))
+            && let Some(id) = line.split_whitespace().next()
+        {
+            return Some(id.to_string());
+        }
+    }
+    if let Ok(out) = std::process::Command::new("xdpyinfo").output() {
+        let text = String::from_utf8_lossy(&out.stdout);
+        // xdpyinfo lists visuals by depth; find the "depth 32" block's visual id.
+        let lines: Vec<&str> = text.lines().collect();
+        for (i, line) in lines.iter().enumerate() {
+            if line.contains("depth 32") {
+                for next in &lines[i..] {
+                    if next.contains("visual id")
+                        && let Some(id) = next.split_whitespace().nth(2)
+                    {
+                        return Some(id.to_string());
+                    }
+                    if next.contains("depth ") && !next.contains("depth 32") {
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    None
 }
 
 #[cfg(test)]

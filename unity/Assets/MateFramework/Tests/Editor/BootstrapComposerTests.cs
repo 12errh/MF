@@ -196,6 +196,7 @@ public class BootstrapComposerTests
         public bool SetClickThrough(bool value) => true;
         public bool HideFromTaskbar(bool value) => true;
         public bool SetWindowType(int type) => true;
+        public bool SetWindowTitle(string title) => true;
         public bool GetMousePosition(out UnityEngine.Vector2Int position) { position = UnityEngine.Vector2Int.zero; return true; }
         public System.Collections.Generic.List<Mate.Platform.MonitorInfoData> GetAllMonitors() => new();
         public System.Collections.Generic.List<System.IntPtr> GetAllVisibleWindows() => new();

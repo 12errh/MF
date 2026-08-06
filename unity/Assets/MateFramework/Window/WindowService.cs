@@ -31,6 +31,11 @@ namespace Mate.Window
                 return Result.Fail("Failed to open the display or locate the Unity window");
 
             _initialized = true;
+            // Name the window after the user's project instead of the default
+            // Unity product name (e.g. "MateEngineX").
+            var projectName = _config.GetString("projectName", string.Empty);
+            if (!string.IsNullOrEmpty(projectName))
+                _backend.SetWindowTitle(projectName);
             ApplyWindowConfig();
             return Result.Ok();
         }

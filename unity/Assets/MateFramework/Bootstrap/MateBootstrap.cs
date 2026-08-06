@@ -72,9 +72,22 @@ namespace Mate.Bootstrap
 
             var camGo = new GameObject("Main Camera");
             camGo.tag = "MainCamera";
-            camGo.AddComponent<Camera>();
+            var cam = camGo.AddComponent<Camera>();
             camGo.AddComponent<AudioListener>();
-            return camGo.GetComponent<Camera>();
+
+            // Transparent background (alpha 0) so the window shows the desktop
+            // behind the character instead of a black box. Matches the reference
+            // scene: SolidColor clear, background alpha 0, orthographic, positioned
+            // looking at the model at the origin.
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = new Color(0f, 0f, 0f, 0f);
+            cam.orthographic = true;
+            cam.orthographicSize = 1.1f;
+            cam.nearClipPlane = 0.01f;
+            cam.farClipPlane = 10f;
+            cam.transform.position = new Vector3(0f, 0.27f, -3.27f);
+            cam.transform.localRotation = Quaternion.identity;
+            return cam;
         }
 
         private static void EnsureVrmLoader()
@@ -93,6 +106,15 @@ namespace Mate.Bootstrap
                 var output = new GameObject("CustomModelOutput");
                 output.transform.SetParent(loader.transform, false);
                 loader.customModelOutput = output;
+            }
+            // Assign the idle AnimatorController so the character is not stuck in
+            // its T-pose. The controller asset is built by MateAnimatorBuilder and
+            // shipped in Resources.
+            if (loader.animatorController == null)
+            {
+                var idle = Resources.Load<RuntimeAnimatorController>("MateIdleController");
+                if (idle != null)
+                    loader.animatorController = idle;
             }
         }
 

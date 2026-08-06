@@ -28,6 +28,9 @@ namespace Mate.Platform
 
         bool GetMousePosition(out Vector2Int position);
 
+        /// <summary>Set the window title (used to name the window after the project).</summary>
+        bool SetWindowTitle(string title);
+
         List<MonitorInfoData> GetAllMonitors();
         List<IntPtr> GetAllVisibleWindows();
         WindowInfoData GetWindowInfo(IntPtr handle);

@@ -25,6 +25,13 @@ LOG="$OUT/build.log"
 
 echo "Building MateRuntime v$VERSION -> $OUT/MateRuntime/MateRuntime"
 
+# Regenerate the idle AnimatorController asset (single Idle state bound to the
+# humanoid idle clip) so a fresh checkout or clip change is picked up.
+"$UNITY" -batchmode -nographics -quit \
+  -projectPath "$ROOT/unity" \
+  -executeMethod Mate.Bootstrap.EditorTools.MateAnimatorBuilder.BuildController \
+  -logFile "$OUT/build-controller.log" >/dev/null 2>&1 || true
+
 # Build the player binary. The BuildScripts directory is auto-discovered by
 # Unity (Editor folder), so no -executeMethod is required for a default build.
 "$UNITY" -batchmode -nographics -quit \

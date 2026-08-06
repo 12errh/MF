@@ -256,6 +256,34 @@ namespace Mate.Platform
             return true;
         }
 
+        public bool SetWindowTitle(string title)
+        {
+            if (_display == IntPtr.Zero || _unityWindow == IntPtr.Zero || string.IsNullOrEmpty(title))
+                return false;
+            // WM_NAME is the legacy atom; modern window managers (and Unity's
+            // XWayland window) read _NET_WM_NAME (UTF-8). Set both so the title
+            // actually changes.
+            XStoreName(_display, _unityWindow, title);
+            var netWmName = XInternAtom(_display, "_NET_WM_NAME", false);
+            var utf8String = XInternAtom(_display, "UTF8_STRING", false);
+            if (netWmName != IntPtr.Zero && utf8String != IntPtr.Zero)
+            {
+                var bytes = global::System.Text.Encoding.UTF8.GetBytes(title);
+                var handle = global::System.Runtime.InteropServices.GCHandle.Alloc(bytes, global::System.Runtime.InteropServices.GCHandleType.Pinned);
+                try
+                {
+                    XChangeProperty(_display, _unityWindow, netWmName, utf8String, 8,
+                        PropModeReplace, handle.AddrOfPinnedObject(), bytes.Length);
+                }
+                finally
+                {
+                    handle.Free();
+                }
+            }
+            XFlush(_display);
+            return true;
+        }
+
         // ---- Click-through (input shaping) ----
 
         public bool SetClickThrough(bool value)
@@ -696,6 +724,7 @@ namespace Mate.Platform
             ref IntPtr childReturn, ref int rootX, ref int rootY, ref int winX, ref int winY, ref uint mask);
         [DllImport(LibX11)] private static extern int XChangeProperty(IntPtr display, IntPtr window, IntPtr property,
             IntPtr type, int format, int mode, IntPtr data, int nItems);
+        [DllImport(LibX11)] private static extern int XStoreName(IntPtr display, IntPtr window, string window_name);
         [DllImport(LibX11)] private static extern IntPtr XGetImage(IntPtr display, IntPtr drawable, int x, int y,
             uint width, uint height, ulong planeMask, int format);
         [DllImport(LibX11)] private static extern int XDestroyImage(IntPtr xImage);

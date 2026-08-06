@@ -42,6 +42,18 @@ public class WindowServiceTests
     }
 
     [Test]
+    public async Task Initialize_SetsWindowTitle_FromProjectName()
+    {
+        WriteToml("[project]\nname = \"my-mate\"\n");
+        var backend = new RecordingBackend();
+        var service = new WindowService(backend, new MateTomlConfig(_dir));
+
+        await service.Initialize(System.IntPtr.Zero);
+
+        Assert.AreEqual("my-mate", backend.WindowTitle);
+    }
+
+    [Test]
     public async Task Initialize_AppliesBorderlessAndClickThrough_WhenConfigured()
     {
         WriteToml("[window]\ntransparent = true\nclick_through = true\n");
@@ -124,6 +136,7 @@ public class WindowServiceTests
         public int WindowType = -1;
         public bool PositionSet;
         public Vector2Int Position;
+        public string WindowTitle;
 
         public bool Initialize(System.IntPtr unityWindow)
         {
@@ -136,6 +149,7 @@ public class WindowServiceTests
         public bool SetClickThrough(bool value) { ClickThrough = value; return true; }
         public bool SetWindowType(int type) { WindowType = type; return true; }
         public bool SetWindowPosition(Vector2Int position) { PositionSet = true; Position = position; return true; }
+        public bool SetWindowTitle(string title) { WindowTitle = title; return true; }
 
         public bool GetWindowPosition(out Vector2Int position) { position = Vector2Int.zero; return true; }
         public bool GetWindowSize(out Vector2Int size) { size = Vector2Int.zero; return true; }
@@ -161,6 +175,7 @@ public class WindowServiceTests
         public bool SetClickThrough(bool value) => false;
         public bool HideFromTaskbar(bool value) => false;
         public bool SetWindowType(int type) => false;
+        public bool SetWindowTitle(string title) => false;
         public bool GetMousePosition(out Vector2Int position) { position = Vector2Int.zero; return false; }
         public System.Collections.Generic.List<MonitorInfoData> GetAllMonitors() => new();
         public System.Collections.Generic.List<System.IntPtr> GetAllVisibleWindows() => new();

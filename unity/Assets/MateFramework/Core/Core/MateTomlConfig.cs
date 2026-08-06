@@ -26,6 +26,7 @@ namespace Mate.Core
             ["character.eye_sensitivity"] = "eyeSensitivity",
             ["character.spine_sensitivity"] = "spineSensitivity",
             ["character.model"] = "modelPath",
+            ["project.name"] = "projectName",
             ["window.transparent"] = "transparent",
             ["window.always_on_top"] = "alwaysOnTop",
             ["window.click_through"] = "clickThrough",
