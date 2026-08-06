@@ -69,10 +69,18 @@ enabled = true
 threshold = 0.5
 allowed_apps = ["firefox", "spotify"]
 
-[ai]
-enabled = true
-provider = "ollama"
-model = "phi3:mini"
+[animation]
+dance_animation = "MateDance"   # the dance clip name (default; use your own)
+idle_switch_time = 30
+dance_switch_time = 15
+
+[system]
+tray_icon = "assets/icon.png"    # optional tray icon
+tray_tooltip = "My Mate"
+notifications = true
+
+[mods]
+mods_path = "mods/"
 ```
 
 ## Check Your Setup
@@ -126,3 +134,71 @@ mf capabilities
 
 Shows what your desktop session supports (transparency, click-through, tray,
 audio monitoring).
+
+## Features & How to Configure Them
+
+These features run in the player (`mf dev`) out of the box. Configure each via
+`mate.toml`.
+
+### Mouse tracking
+
+The character's head and spine turn toward your cursor. Tune sensitivity and
+the max rotation angles:
+
+```toml
+[character]
+model = "assets/avatar.vrm"
+head_sensitivity = 1.0   # how fast the head reacts
+eye_sensitivity = 1.0
+spine_sensitivity = 0.5
+head_max_angle = 20      # degrees the head can turn
+spine_max_angle = 10
+```
+
+### Audio-reactive dancing
+
+When a monitored app (in `[audio] allowed_apps`) plays sound above
+`threshold`, the character dances. The dance clip is **not hardcoded** —
+`[animation] dance_animation` selects it (default `MateDance`, built into the
+runtime). To use your own clip, drop it in the runtime's `Resources` folder and
+set the name:
+
+```toml
+[animation]
+dance_animation = "MyDanceClip"
+```
+
+### System tray & notifications
+
+The player shows a tray icon on start (AppIndicator) and can send desktop
+notifications (via `notify-send`). Configure the icon and tooltip:
+
+```toml
+[system]
+tray_icon = "assets/icon.png"   # absolute or project-relative path
+tray_tooltip = "My Mate"
+```
+
+### Mods
+
+Drop a mod into `mods/` with a `mod.toml` manifest:
+
+```
+my-mate/mods/my-mod/mod.toml
+```
+
+```toml
+name = "my-mod"
+version = "1.0.0"
+description = "Custom asset overrides"
+```
+
+v1 mods are **config + asset overrides only** — they are discovered and exposed,
+but no code is executed (ADR-013). Code-extensible mods are planned for v2.
+
+### AI chat (service layer only)
+
+The Ollama provider is implemented and unit-tested, but v1 has **no chat GUI
+yet** — there is no interactive way to chat from the player. An interactive
+chat/context-menu UI is the planned next feature. Until then, treat AI chat as
+service-layer-only.

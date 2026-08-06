@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Features wired end-to-end** (previously registered but inert in the player):
+  - **Mouse tracking** — `MouseBlendValues` now carries signed direction
+    (yaw/pitch); a new `MouseTrackingApplier` rotates the loaded character's
+    head and spine toward the cursor (max angles via `[character]` config).
+  - **Audio-reactive dancing** — `PulseAudioService.DiscoverAndMonitor()` starts
+    monitoring allowed apps so `Poll()` publishes real peaks; a `DanceReaction`
+    consumer plays the configured dance clip on `DanceStartedEvent`. A
+    `MateDanceBuilder` editor tool builds the default clip; the clip is
+    selectable via `[animation] dance_animation`.
+  - **System tray & notifications** — `LinuxNativeTray` (AppIndicator +
+    `notify-send`) behind an `INativeTray` seam; `SystemTrayReaction` forwards
+    tray/notification events to the native layer; bootstrap shows the tray icon
+    on start.
+  - **Mods** — the bootstrap now calls `ModService.LoadMods()` so `mods/`
+    manifests are actually discovered (config/asset overrides; no code
+    execution in v1).
 - Native X11 window backend (`IWindowService`):
   - `X11WindowBackend` — ported X11 windowing: position/size, always-on-top,
     borderless (`_MOTIF_WM_HINTS`), click-through (`XShape` input shaping),

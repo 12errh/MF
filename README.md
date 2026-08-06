@@ -61,8 +61,17 @@ chat — is handled by the framework's Unity runtime.
 | Runtime download from GitHub Releases | ✅ Implemented (`mf runtime install`) |
 | End-to-end `mf dev` (player + model load) | ✅ Verified |
 | Native X11 window backend | ✅ Implemented (transparent window, always-on-top, borderless, click-through, project name title, idle animation) |
+| Mouse tracking (character follows cursor) | ✅ Wired & working |
+| Audio-reactive dancing | ✅ Wired & working |
+| System tray & notifications | ✅ Wired & working (AppIndicator + notify-send) |
+| Mods (`mods/<name>/mod.toml` discovery) | ✅ Wired & working |
+| AI chat (Ollama) | ⚠️ Service-layer only — no chat GUI yet (planned next) |
 | Hyprland / KWin (Wayland) backends | ⏳ Deferred |
 | Windows / macOS support | ⏳ Planned (v2.0+) |
+
+> **"Wired & working"** means the feature actually runs in the player (`mf dev`).
+> **"Service-layer only"** means the service is implemented and unit-tested but
+> has no interactive path in the player yet.
 
 ---
 
@@ -72,12 +81,17 @@ chat — is handled by the framework's Unity runtime.
   window (X11 backend); the window is named after your project
 - **🚶 Idle animation** — loaded characters break out of their T-pose and play
   a humanoid idle loop
-- **👀 Mouse tracking** — the character follows your cursor
-- **💃 Audio-reactive dancing** — dances when monitored apps play music
-  (PulseAudio)
-- **💬 AI chat** — configurable backend (Ollama), with personality profiles
-- **🪟 System tray & notifications** — service layer ready for native backends
-- **🧩 Mod support** — drop-in mods with `mod.toml` manifests
+- **👀 Mouse tracking** — the character's head and spine turn toward your cursor
+  (sensitivity and max angles configurable in `mate.toml`)
+- **💃 Audio-reactive dancing** — dances when an allowed app plays music
+  (PulseAudio). The dance clip is configurable via `[animation] dance_animation`
+  — supply your own clip or use the built-in default
+- **💬 AI chat** — service layer (Ollama) implemented & tested; an interactive
+  chat GUI is planned next (not yet wired into the player)
+- **🪟 System tray & notifications** — tray icon (AppIndicator) and desktop
+  notifications (notify-send), config-driven via `[system]`
+- **🧩 Mod support** — drop-in mods with `mod.toml` manifests; v1 mods are
+  config/asset overrides (no code execution)
 - **♻️ Hot reload** — config/assets reload on change; code changes are never
   hot-reloaded by design (ADR-013)
 - **🔍 `mf doctor`** — diagnoses manifest, assets, runtime, display server,
