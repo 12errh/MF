@@ -117,6 +117,64 @@ public class MouseTrackerTests
         ctx.Dispose();
     }
 
+    [Test]
+    public void Update_CursorRightOfCenter_ProducesPositiveSignedYaw()
+    {
+        var ctx = new MateContext();
+        ctx.RegisterSingleton<IConfiguration>(new MockConfig());
+        ctx.RegisterSingleton<IEventBus>(new SimpleEventBus());
+        var tracker = new MouseTracker(
+            ctx.Resolve<IConfiguration>(), ctx.Resolve<IEventBus>(),
+            () => new Vector2(750f, 400f), () => new Vector2(1000f, 800f));
+
+        tracker.Update();
+        var values = tracker.GetBlendValues();
+
+        Assert.Greater(values.HeadYaw, 0f);
+        Assert.Greater(values.EyeYaw, 0f);
+        Assert.Greater(values.SpineYaw, 0f);
+        Assert.AreEqual(0f, values.EyePitch, 0.001f); // vertically centered
+        ctx.Dispose();
+    }
+
+    [Test]
+    public void Update_CursorLeftOfHead_ProducesNegativeSignedYaw()
+    {
+        var ctx = new MateContext();
+        ctx.RegisterSingleton<IConfiguration>(new MockConfig());
+        ctx.RegisterSingleton<IEventBus>(new SimpleEventBus());
+        var tracker = new MouseTracker(
+            ctx.Resolve<IConfiguration>(), ctx.Resolve<IEventBus>(),
+            () => new Vector2(250f, 400f), () => new Vector2(1000f, 800f));
+
+        tracker.Update();
+        var values = tracker.GetBlendValues();
+
+        Assert.Less(values.HeadYaw, 0f);
+        Assert.Less(values.EyeYaw, 0f);
+        Assert.Less(values.SpineYaw, 0f);
+        ctx.Dispose();
+    }
+
+    [Test]
+    public void Update_CursorAboveCenter_ProducesPositivePitch()
+    {
+        var ctx = new MateContext();
+        ctx.RegisterSingleton<IConfiguration>(new MockConfig());
+        ctx.RegisterSingleton<IEventBus>(new SimpleEventBus());
+        var tracker = new MouseTracker(
+            ctx.Resolve<IConfiguration>(), ctx.Resolve<IEventBus>(),
+            () => new Vector2(500f, 600f), () => new Vector2(1000f, 800f));
+
+        tracker.Update();
+        var values = tracker.GetBlendValues();
+
+        Assert.Greater(values.HeadPitch, 0f);
+        Assert.Greater(values.EyePitch, 0f);
+        Assert.AreEqual(0f, values.HeadYaw, 0.001f); // horizontally centered
+        ctx.Dispose();
+    }
+
     private class MockConfig : IConfiguration
     {
         private readonly Dictionary<string, object> _v = new();

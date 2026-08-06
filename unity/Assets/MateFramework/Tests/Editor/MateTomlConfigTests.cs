@@ -33,6 +33,8 @@ model = ""assets/avatar.vrm""
 head_sensitivity = 1.5
 eye_sensitivity = 0.8
 spine_sensitivity = 0.3
+head_max_angle = 25
+spine_max_angle = 12
 
 [audio]
 threshold = 0.35
@@ -42,6 +44,13 @@ allowed_apps = [""spotify"", ""firefox""]
 dance_switch_time = 12.0
 idle_switch_time = 20.0
 dance_animation = ""dance_3""
+
+[system]
+tray_icon = ""assets/icon.png""
+tray_tooltip = ""My Mate""
+
+[mods]
+mods_path = ""custom-mods/""
 
 [ai]
 enabled = true
@@ -62,6 +71,11 @@ base_url = ""http://localhost:11434""
         Assert.AreEqual(1.5f, cfg.GetFloat("headSensitivity", 1.0f), 0.001f);
         Assert.AreEqual(0.8f, cfg.GetFloat("eyeSensitivity", 1.0f), 0.001f);
         Assert.AreEqual(0.3f, cfg.GetFloat("spineSensitivity", 0.5f), 0.001f);
+        Assert.AreEqual(25f, cfg.GetFloat("headMaxAngle", 20f), 0.001f);
+        Assert.AreEqual(12f, cfg.GetFloat("spineMaxAngle", 10f), 0.001f);
+        Assert.AreEqual("assets/icon.png", cfg.GetString("trayIcon", ""));
+        Assert.AreEqual("My Mate", cfg.GetString("trayTooltip", ""));
+        Assert.AreEqual("custom-mods/", cfg.GetString("modsPath", "mods/"));
     }
 
     [Test]

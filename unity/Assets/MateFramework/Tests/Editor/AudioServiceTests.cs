@@ -164,6 +164,39 @@ public class AudioServiceTests
         Assert.IsTrue(fired);
     }
 
+    [Test]
+    public void AudioService_DiscoverAndMonitor_StartsMonitoringAllowedApps()
+    {
+        _pulse.PeakLevel = 0.5f;
+        _pulse.Programs.Add(new AudioProgramInfo("spotify", "spotify", 100, 0.5, 42));
+        _pulse.Programs.Add(new AudioProgramInfo("chrome", "chrome", 200, 0.5, 43)); // not allowed
+        var svc = new PulseAudioService(_ctx.Resolve<IConfiguration>(), _ctx.Resolve<IEventBus>(), _pulse);
+
+        svc.DiscoverAndMonitor();
+
+        Assert.IsTrue(svc.IsMonitoring);
+        Assert.AreEqual(0.5f, svc.GetPeakLevel(42), 0.001f); // allowed app node monitored
+        Assert.AreEqual(0f, svc.GetPeakLevel(7), 0.001f);    // non-allowed not monitored
+    }
+
+    [Test]
+    public void AudioService_DiscoverAndMonitor_ThenPoll_PublishesPeakEvent()
+    {
+        _pulse.PeakLevel = 0.5f;
+        _pulse.Programs.Add(new AudioProgramInfo("firefox", "firefox", 300, 0.5, 9));
+        var bus = _ctx.Resolve<IEventBus>();
+        bool eventFired = false;
+        int eventNode = -1;
+        bus.Subscribe<AudioPeakEvent>(e => { eventFired = true; eventNode = e.NodeId; });
+
+        var svc = new PulseAudioService(_ctx.Resolve<IConfiguration>(), bus, _pulse);
+        svc.DiscoverAndMonitor();
+        svc.Poll();
+
+        Assert.IsTrue(eventFired);
+        Assert.AreEqual(9, eventNode);
+    }
+
     private class FakePulseAudio : IPulseAudio
     {
         public float PeakLevel;

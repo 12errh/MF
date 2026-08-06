@@ -15,6 +15,7 @@ namespace Mate.Bootstrap.EditorTools
     public static class MateAnimatorBuilder
     {
         private const string ClipPath = "Assets/MateFramework/Animations/MateIdle.anim";
+        private const string DanceClipPath = "Assets/MateFramework/Animations/MateDance.anim";
         private const string ControllerPath = "Assets/MateFramework/Resources/MateIdleController.controller";
 
         [MenuItem("Tools/Mate/Build Idle Controller")]
@@ -51,11 +52,27 @@ namespace Mate.Bootstrap.EditorTools
                 idle = sm.AddState("Idle");
             }
             idle.motion = clip;
+
+            // Add a Dance state bound to the default dance clip (if present).
+            // A dev can replace MateDance.anim or set [animation] dance_animation
+            // to their own clip; the state name is kept stable so the runtime
+            // AnimatorDriver.PlayDance can target it by name.
+            var danceClip = AssetDatabase.LoadAssetAtPath<AnimationClip>(DanceClipPath);
+            if (danceClip != null)
+            {
+                var dance = sm.states.FirstOrDefault(s => s.state.name == "MateDance").state;
+                if (dance == null)
+                {
+                    dance = sm.AddState("MateDance");
+                }
+                dance.motion = danceClip;
+            }
+
             sm.defaultState = idle;
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
-            Debug.Log($"[MateAnimatorBuilder] Controller written to {ControllerPath} (state={idle.name}, motion={clip.name})");
+            Debug.Log($"[MateAnimatorBuilder] Controller written to {ControllerPath} (idle={idle.name}, dance={(danceClip != null ? "MateDance" : "none")})");
         }
     }
 }

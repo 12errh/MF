@@ -12,5 +12,5 @@ namespace Mate.Interfaces
         float GetPeakLevel(uint nodeId);
     }
 
-    public record AudioProgramInfo(string Name, string ProcessName, int ProcessId, double Volume);
+    public record AudioProgramInfo(string Name, string ProcessName, int ProcessId, double Volume, uint NodeId = 0);
 }
