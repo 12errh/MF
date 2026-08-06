@@ -45,8 +45,9 @@ chat — is handled by the framework's Unity runtime.
 > ⚠️ **Early development (v0.1.0).** The CLI, core, all four feature modules,
 > and the Unity bootstrap (composition root + entry scene) are implemented and
 > tested. A `v1.0.0` GitHub release carries the Unity runtime player, so
-> `mf runtime install 1.0.0` downloads it and `mf dev` runs end-to-end (the
-> character loads in a normal window; native window styling is deferred).
+> `mf runtime install 1.0.0` downloads it and `mf dev` runs end-to-end: the
+> character renders on a transparent window, always-on-top, animated, and named
+> after your project. Native window backends are implemented for X11.
 
 | Area | Status |
 |------|--------|
@@ -59,14 +60,18 @@ chat — is handled by the framework's Unity runtime.
 | CI/CD (GitHub Actions) | ✅ Configured |
 | Runtime download from GitHub Releases | ✅ Implemented (`mf runtime install`) |
 | End-to-end `mf dev` (player + model load) | ✅ Verified |
-| Native window backends (X11/Hyprland/KWin) | ⏳ Deferred |
+| Native X11 window backend | ✅ Implemented (transparent window, always-on-top, borderless, click-through, project name title, idle animation) |
+| Hyprland / KWin (Wayland) backends | ⏳ Deferred |
 | Windows / macOS support | ⏳ Planned (v2.0+) |
 
 ---
 
 ## ✨ Features
 
-- **🖥️ Desktop companion** — transparent, always-on-top character window
+- **🖥️ Desktop companion** — transparent, always-on-top, borderless character
+  window (X11 backend); the window is named after your project
+- **🚶 Idle animation** — loaded characters break out of their T-pose and play
+  a humanoid idle loop
 - **👀 Mouse tracking** — the character follows your cursor
 - **💃 Audio-reactive dancing** — dances when monitored apps play music
   (PulseAudio)

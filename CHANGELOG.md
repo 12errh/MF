@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Native X11 window backend (`IWindowService`):
+  - `X11WindowBackend` — ported X11 windowing: position/size, always-on-top,
+    borderless (`_MOTIF_WM_HINTS`), click-through (`XShape` input shaping),
+    window type, hide-from-taskbar, mouse position, monitor enumeration
+    (`XRandR`), and window discovery by PID.
+  - `WindowService` — adapter over the `IWindowBackend` seam; applies the
+    `mate.toml [window]` settings and names the window after the project.
+  - `mf dev` detects a 32-bit ARGB visual and sets `SDL_VIDEO_X11_VISUALID`
+    so the player opens a transparent window.
+  - Idle animation: `MateAnimatorBuilder` builds a minimal AnimatorController
+    (single Idle state bound to a humanoid idle clip) so characters break out
+    of their T-pose; the loaded model is rotated to face the camera and the
+    camera grounds the character at the bottom of the window.
 - Real runtime download: `mf runtime install <version>` now downloads the
   player tarball from GitHub Releases (`12errh/MF`) via `reqwest`, extracts it
   with `tar`/`flate2`, and verifies the player binary lands in the expected
