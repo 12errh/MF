@@ -76,7 +76,20 @@ namespace Mate.Bootstrap
 
             var result = await character.LoadModel(fullPath);
             if (!result.IsSuccess)
+            {
                 UnityEngine.Debug.LogWarning($"Could not load model '{modelPath}': {result.Error}");
+                return;
+            }
+
+            // VRM models face +Z in Unity, but the camera sits at z=-3.27 looking
+            // toward +Z, so the model's back faces the camera. Rotate it 180°
+            // around Y so its front faces the viewer.
+            var model = character.CurrentModel;
+            if (model != null)
+            {
+                var rot = model.transform.rotation;
+                model.transform.rotation = UnityEngine.Quaternion.Euler(rot.eulerAngles.x, rot.eulerAngles.y + 180f, rot.eulerAngles.z);
+            }
         }
     }
 }

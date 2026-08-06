@@ -67,25 +67,35 @@ namespace Mate.Bootstrap
 
         private static Camera EnsureCamera()
         {
+            Camera cam;
             if (Camera.main != null)
-                return Camera.main;
-
-            var camGo = new GameObject("Main Camera");
-            camGo.tag = "MainCamera";
-            var cam = camGo.AddComponent<Camera>();
-            camGo.AddComponent<AudioListener>();
+            {
+                cam = Camera.main;
+            }
+            else
+            {
+                var camGo = new GameObject("Main Camera");
+                camGo.tag = "MainCamera";
+                cam = camGo.AddComponent<Camera>();
+                camGo.AddComponent<AudioListener>();
+            }
 
             // Transparent background (alpha 0) so the window shows the desktop
             // behind the character instead of a black box. Matches the reference
             // scene: SolidColor clear, background alpha 0, orthographic, positioned
-            // looking at the model at the origin.
+            // looking at the model at the origin. Configured unconditionally so a
+            // pre-existing scene camera (Bootstrap.unity) is also corrected.
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0f, 0f, 0f, 0f);
             cam.orthographic = true;
             cam.orthographicSize = 1.1f;
             cam.nearClipPlane = 0.01f;
             cam.farClipPlane = 10f;
-            cam.transform.position = new Vector3(0f, 0.27f, -3.27f);
+            // Raise the camera so the character's feet sit near the bottom of the
+            // window (a grounded desktop-companion look) rather than floating in
+            // the middle. View spans y = cameraY ± orthoSize; y=0 is the model's
+            // feet, so cameraY ~ +1.0 puts the feet near the bottom edge.
+            cam.transform.position = new Vector3(0f, 1.0f, -3.27f);
             cam.transform.localRotation = Quaternion.identity;
             return cam;
         }

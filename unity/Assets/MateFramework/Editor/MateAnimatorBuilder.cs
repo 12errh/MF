@@ -26,33 +26,28 @@ namespace Mate.Bootstrap.EditorTools
                 return;
             }
 
-            // Reuse the existing controller if present.
             var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(ControllerPath)
                 ?? AnimatorController.CreateAnimatorControllerAtPath(ControllerPath);
 
-            // Reset to a single layer with one Idle state bound to the clip.
-            controller.layers = new[]
+            // Ensure the controller has a layer with a real state machine. If the
+            // asset was previously written without a valid layer (state machine
+            // fileID 0), recreate it fresh so the idle state serializes.
+            if (controller.layers.Length == 0 || controller.layers[0].stateMachine == null)
             {
-                new AnimatorControllerLayer
-                {
-                    name = "Base Layer",
-                    defaultWeight = 1f,
-                    stateMachine = CreateIdleStateMachine(clip),
-                },
-            };
+                AssetDatabase.DeleteAsset(ControllerPath);
+                AssetDatabase.Refresh();
+                controller = AnimatorController.CreateAnimatorControllerAtPath(ControllerPath);
+            }
 
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
-            Debug.Log($"[MateAnimatorBuilder] Controller written to {ControllerPath}");
-        }
-
-        private static AnimatorStateMachine CreateIdleStateMachine(AnimationClip clip)
-        {
-            var sm = new AnimatorStateMachine { name = "Base Layer" };
+            var sm = controller.layers[0].stateMachine;
+            sm.name = "Base Layer";
             var idle = sm.AddState("Idle");
             idle.motion = clip;
             sm.defaultState = idle;
-            return sm;
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            Debug.Log($"[MateAnimatorBuilder] Controller written to {ControllerPath} (state={idle.name}, motion={clip.name})");
         }
     }
 }
