@@ -92,11 +92,11 @@ pub fn install_runtime(version: &str) -> Result<PathBuf, MfError> {
 
     let cache = rv.cache_dir();
     // Stage the archive next to the cache dir so a failed install leaves no
-    // partial version directory behind.
+    // partial version directory behind, and remove it on any failure.
     let archive = cache_dir_tmp(cache.parent().unwrap_or(Path::new("/tmp")), &rv.0);
-    download(&url, &archive)?;
-    extract(&archive, &cache)?;
+    let result = download(&url, &archive).and_then(|_| extract(&archive, &cache));
     let _ = std::fs::remove_file(&archive);
+    result?;
 
     if rv.status() != InstallStatus::Installed {
         return Err(MfError::Io(format!(
@@ -121,6 +121,12 @@ fn download(url: &str, dest: &Path) -> Result<(), MfError> {
             url: url.to_string(),
             status: status.as_u16(),
         });
+    }
+
+    // Ensure the cache parent exists (a fresh machine has no ~/.mate-framework).
+    if let Some(parent) = dest.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| MfError::Io(format!("failed to create {}: {e}", parent.display())))?;
     }
 
     let mut file = std::fs::File::create(dest)
