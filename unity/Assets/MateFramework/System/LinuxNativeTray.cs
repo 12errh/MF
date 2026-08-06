@@ -97,7 +97,7 @@ namespace Mate.System
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"notify-send failed: {ex.Message}");
+                UnityEngine.Debug.LogWarning($"notify-send failed: {ex.Message}");
             }
 #endif
         }
