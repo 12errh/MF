@@ -2,8 +2,8 @@ use std::path::{Path, PathBuf};
 
 use semver::Version;
 
-use crate::security::validate_url;
 use crate::MfError;
+use crate::security::validate_url;
 
 /// Where runtimes are cached on disk.
 pub fn runtime_cache_dir() -> PathBuf {
