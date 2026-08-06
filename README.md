@@ -44,9 +44,9 @@ chat — is handled by the framework's Unity runtime.
 
 > ⚠️ **Early development (v0.1.0).** The CLI, core, all four feature modules,
 > and the Unity bootstrap (composition root + entry scene) are implemented and
-> tested. The **runtime binary download is staged but not yet published** — a
-> GitHub release with the Unity runtime is the remaining piece before
-> end-to-end `mf dev` works out of the box.
+> tested. A `v1.0.0` GitHub release carries the Unity runtime player, so
+> `mf runtime install 1.0.0` downloads it and `mf dev` runs end-to-end (the
+> character loads in a normal window; native window styling is deferred).
 
 | Area | Status |
 |------|--------|
@@ -57,7 +57,8 @@ chat — is handled by the framework's Unity runtime.
 | Error messages & `mf doctor` diagnostics | ✅ Implemented |
 | Security validators (`validate_path`, `validate_url`) | ✅ Implemented |
 | CI/CD (GitHub Actions) | ✅ Configured |
-| Runtime download from GitHub Releases | 🚧 Staged — pending first release |
+| Runtime download from GitHub Releases | ✅ Implemented (`mf runtime install`) |
+| End-to-end `mf dev` (player + model load) | ✅ Verified |
 | Native window backends (X11/Hyprland/KWin) | ⏳ Deferred |
 | Windows / macOS support | ⏳ Planned (v2.0+) |
 
@@ -126,19 +127,21 @@ cp ~/Downloads/avatar.vrm assets/
 # 3. Configure mate.toml
 #    [character] model = "assets/avatar.vrm"
 
-# 4. Diagnose your setup
+# 4. Install the runtime (downloads the player release)
+mf runtime install 1.0.0
+
+# 5. Diagnose your setup
 mf doctor
 
-# 5. Run
+# 6. Run
 mf dev
 ```
 
 Full walkthrough: **[docs/getting-started.md](docs/getting-started.md)**
 
-> ⚠️ `mf dev` launches the Unity runtime from the local runtime cache
-> (`~/.mate-framework/runtimes/`). Until the first runtime release is
-> published, place the player binary at the path `mf runtime status`
-> reports, or run the `unity/` project directly from the Unity Editor.
+> `mf runtime install <version>` downloads the player binary from the GitHub
+> release into `~/.mate-framework/runtimes/<version>/`. `mf dev` launches it
+> from that cache with `--projectPath <dir>`.
 
 ---
 
@@ -153,7 +156,7 @@ Full walkthrough: **[docs/getting-started.md](docs/getting-started.md)**
 | `mf package` | Create `<name>.tar.gz` with the build manifest inside |
 | `mf runtime list` | List installed runtime versions |
 | `mf runtime status` | Show cache location and installed versions |
-| `mf runtime install <v>` | Validate/stage a runtime version |
+| `mf runtime install <v>` | Download & install a runtime version from GitHub Releases |
 | `mf capabilities` | Report what your desktop session supports |
 
 Every command supports `--json` for machine-readable output.
@@ -183,6 +186,7 @@ Every command supports `--json` for machine-readable output.
 │       │   └── Scenes/     # Entry scene (Camera + MateBootstrap)
 │       └── Grabbed/        # Vendored reference scripts + UniVRM packages
 ├── docs/                   # PRD, TRD, ADRs, plans, specs, getting-started
+├── scripts/                # build-player.sh (reproducible Unity player build)
 ├── .github/workflows/      # CI + release pipelines
 └── refrence/               # (gitignored) original reference engine
 ```
@@ -192,7 +196,7 @@ Every command supports `--json` for machine-readable output.
 ## 🧪 Testing
 
 ```bash
-# Rust CLI + core (78 tests)
+# Rust CLI + core (79 tests)
 cargo test --workspace
 
 # Formatting + lint
@@ -205,7 +209,7 @@ cargo bench -p mf --bench cli_benchmarks
 # .NET core (33 tests)
 cd runtime && dotnet test Mate.Core.sln
 
-# Unity EditMode tests (103 Mate.* tests pass; 339 total in suite)
+# Unity EditMode tests (146 Mate.* tests pass; 340 total in suite)
 #   via Unity Test Runner, or headless:
 #   <Unity 6000.2.6f2> -batchmode -nographics -projectPath unity \
 #     -runTests -testPlatform EditMode -testResults results.xml

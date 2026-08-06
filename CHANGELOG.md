@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Real runtime download: `mf runtime install <version>` now downloads the
+  player tarball from GitHub Releases (`12errh/MF`) via `reqwest`, extracts it
+  with `tar`/`flate2`, and verifies the player binary lands in the expected
+  layout. New `DownloadFailed` error variant reports the failed URL and HTTP
+  status.
+- `scripts/build-player.sh` — reproducible Unity Linux x64 player build into
+  the runtime cache.
+- First `v1.0.0` GitHub release carrying `MateRuntime-linux-x64.tar.gz`, so
+  `mf dev` runs end-to-end out of the box.
 - Unity bootstrap (composition root):
   - `MateBootstrap` MonoBehaviour — entry point that parses `--projectPath`,
     creates the scene objects the runtime needs, composes the `MateContext`,
@@ -45,3 +54,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `mf package` no longer fails when the archive is written into the directory
   being tar'd (archive is staged in a temp dir first).
 - Runtime download CLI no longer claims "not implemented" for staged installs.
+- `mf runtime install` creates the runtime cache parent directory, so the first
+  install on a fresh machine succeeds (previously failed "No such file or
+  directory").
+- Unity player no longer fails to load the model: the bootstrap now creates a
+  `CustomModelOutput` node the grabbed `VRMLoader` needs to parent loaded
+  models (previously a null reference in a minimal scene).
+- `cargo fmt` import ordering in `runtime.rs`.

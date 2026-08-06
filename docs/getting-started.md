@@ -87,11 +87,18 @@ permissions, and tells you what to fix.
 ## Run
 
 ```bash
+# Install the runtime player (downloads from GitHub Releases on first use)
+mf runtime install 1.0.0
+
 mf dev
 ```
 
 `mf dev` starts the Unity runtime, watches your config and assets, and
 restarts on change. Hot reload covers config/assets only — not C# code.
+
+> The first `mf dev` needs a runtime installed. `mf runtime install <version>`
+> downloads the player binary into `~/.mate-framework/runtimes/<version>/` and
+> `mf dev` launches it with `--projectPath <dir>`.
 
 ## Build & Package
 
@@ -108,7 +115,7 @@ mf package
 ```bash
 mf runtime list      # installed versions
 mf runtime status    # cache location + versions
-mf runtime install 1.0.0
+mf runtime install 1.0.0   # download & install a version from GitHub Releases
 ```
 
 ## Platform Capabilities
