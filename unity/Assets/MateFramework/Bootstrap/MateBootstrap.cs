@@ -20,6 +20,7 @@ namespace Mate.Bootstrap
         private MateContext _ctx;
         private IAudioService _audio;
         private IMouseTracker _mouse;
+        private IWindowService _window;
 
         /// <summary>The composed service container (null until Awake).</summary>
         public MateContext Context => _ctx;
@@ -35,6 +36,13 @@ namespace Mate.Bootstrap
             _ctx = BootstrapComposer.Compose(projectDir);
             _audio = _ctx.Resolve<IAudioService>();
             _mouse = _ctx.Resolve<IMouseTracker>();
+            _window = _ctx.Resolve<IWindowService>();
+
+            // Apply mate.toml [window] settings (always-on-top, borderless,
+            // click-through, window type, position) to the native window.
+            // The handle is IntPtr.Zero: the X11 backend locates the player
+            // window by PID itself.
+            _ = _window.Initialize(IntPtr.Zero);
 
             // Fall back to the current model dir if the project path is unusable.
             if (!global::System.IO.Directory.Exists(projectDir))

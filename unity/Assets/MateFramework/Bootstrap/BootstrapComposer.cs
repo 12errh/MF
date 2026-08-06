@@ -1,5 +1,3 @@
-using System;
-using System.IO;
 using System.Threading.Tasks;
 using Mate.AI;
 using Mate.Audio;
@@ -9,7 +7,9 @@ using Mate.Character.Tracking;
 using Mate.Core;
 using Mate.Interfaces;
 using Mate.Mods;
+using Mate.Platform;
 using Mate.System;
+using Mate.Window;
 
 namespace Mate.Bootstrap
 {
@@ -25,6 +25,7 @@ namespace Mate.Bootstrap
         {
             public IVrmLoader VrmLoader;
             public IPulseAudio PulseAudio;
+            public IWindowBackend WindowBackend;
         }
 
         /// <summary>Compose a fully wired MateContext for a project directory.</summary>
@@ -39,6 +40,9 @@ namespace Mate.Bootstrap
 
             var vrm = adapters?.VrmLoader ?? new VrmLoaderAdapter();
             var pulse = adapters?.PulseAudio;
+            // The window backend is the ported X11 implementation; tests inject
+            // a fake so native calls never run in EditMode tests.
+            var windowBackend = adapters?.WindowBackend ?? new X11WindowBackend();
             // Stateful services are singletons so model/audio state persists
             // across resolves (the bootstrap and consumers share one instance).
             ctx.RegisterSingleton<ICharacterService>(new CharacterService(config, bus, vrm));
@@ -48,6 +52,7 @@ namespace Mate.Bootstrap
             ctx.RegisterSingleton<ISystemService>(new SystemTrayService(config, bus));
             ctx.RegisterSingleton<IAIService>(new OllamaProvider(config, bus));
             ctx.RegisterSingleton<IModService>(new ModService());
+            ctx.RegisterSingleton<IWindowService>(new WindowService(windowBackend, config));
 
             // Cross-module bridge: audio peaks trigger dance events. Registered
             // so MateContext.Dispose runs its IDisposable.Dispose (unsubscribe).

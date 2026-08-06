@@ -43,6 +43,7 @@ public class BootstrapComposerTests
         {
             VrmLoader = new FakeVrmLoader(),
             PulseAudio = new FakePulseAudio(),
+            WindowBackend = new FakeWindowBackend(),
         };
 
         using var ctx = BootstrapComposer.Compose(_dir, adapters);
@@ -54,6 +55,7 @@ public class BootstrapComposerTests
         Assert.IsNotNull(ctx.Resolve<ISystemService>());
         Assert.IsNotNull(ctx.Resolve<IAIService>());
         Assert.IsNotNull(ctx.Resolve<IModService>());
+        Assert.IsNotNull(ctx.Resolve<Mate.Core.IWindowService>());
     }
 
     [Test]
@@ -179,5 +181,25 @@ public class BootstrapComposerTests
     {
         public List<AudioProgramInfo> GetPlayingPrograms() => new();
         public float GetPeakLevel(uint nodeId) => 0f;
+    }
+
+    private class FakeWindowBackend : Mate.Platform.IWindowBackend
+    {
+        public bool Initialized;
+        public bool Initialize(System.IntPtr unityWindow) { Initialized = true; return true; }
+        public bool GetWindowPosition(out UnityEngine.Vector2Int position) { position = UnityEngine.Vector2Int.zero; return true; }
+        public bool SetWindowPosition(UnityEngine.Vector2Int position) => true;
+        public bool GetWindowSize(out UnityEngine.Vector2Int size) { size = UnityEngine.Vector2Int.zero; return true; }
+        public bool SetWindowSize(UnityEngine.Vector2Int size) => true;
+        public bool SetAlwaysOnTop(bool value) => true;
+        public bool SetBorderless(bool value) => true;
+        public bool SetClickThrough(bool value) => true;
+        public bool HideFromTaskbar(bool value) => true;
+        public bool SetWindowType(int type) => true;
+        public bool GetMousePosition(out UnityEngine.Vector2Int position) { position = UnityEngine.Vector2Int.zero; return true; }
+        public System.Collections.Generic.List<Mate.Platform.MonitorInfoData> GetAllMonitors() => new();
+        public System.Collections.Generic.List<System.IntPtr> GetAllVisibleWindows() => new();
+        public Mate.Platform.WindowInfoData GetWindowInfo(System.IntPtr handle) => default;
+        public void Dispose() { }
     }
 }
