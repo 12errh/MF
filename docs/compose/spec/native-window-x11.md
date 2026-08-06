@@ -1,6 +1,6 @@
 ---
 feature: native-window-x11
-status: designed
+status: in-progress
 updated: 2026-08-06
 branch: native-window-x11
 commits:
