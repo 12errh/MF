@@ -3,7 +3,7 @@ feature: native-window-x11
 status: delivered
 updated: 2026-08-06
 branch: native-window-x11
-commits: 40dccd9..eca2e1c
+commits: 40dccd9..0874371
 ---
 
 # Native Window Backend (X11)
@@ -26,15 +26,25 @@ as a thin adapter over the `IWindowBackend` seam, reads `[window]` via
 the six `[window]` keys. The port is a plain class constructed in the composer
 (rather than a scene MonoBehaviour) so it is testable with a fake backend.
 
-**Verification** — Unity EditMode headless: 313 passed / 34 failed, all 34
+**Verification** — Unity EditMode headless: 314 passed / 34 failed, all 34
 PRE-EXISTING vendored UniGLTF/UniVRM10/VRM headless-incompatible tests; all 7
 new `WindowServiceTests` + window registration in `BootstrapComposerTests`
 pass. `cargo test --workspace`: 79 pass (unaffected). Live e2e on GNOME
 Wayland (XWayland): rebuilt player, ran `mf dev` with `always_on_top=true`,
 `borderless` + `click_through=true`; `xprop` confirmed `_NET_WM_STATE_ABOVE`
-and `_MOTIF_WM_HINTS` decorations=0 applied, model loads, player stays alive,
-no exceptions. The `window_type` setting is applied via client-message but was
-not separately e2e-verified (the default is `normal`).
+and `_MOTIF_WM_HINTS` decorations=0 applied, window is Depth 32 (ARGB
+transparent), title is the project name, model loads and animates, player stays
+alive, no exceptions.
+
+User-reported fixes applied and e2e-verified on top of the initial delivery:
+(1) window transparency — `mf dev` sets `SDL_VIDEO_X11_VISUALID` to the ARGB
+visual detected via glxinfo/xdpyinfo (window now Depth 32) and the camera uses
+SolidColor clear with alpha 0; (2) model no longer in T-pose — the idle
+AnimatorController (MateIdleController) is built correctly by
+`MateAnimatorBuilder` and assigned; (3) model faces the camera — rotated 180°
+around Y after load; (4) window shows the project name instead of
+"MateEngineX" — `SetWindowTitle` writes both `WM_NAME` and `_NET_WM_NAME`;
+(5) character grounded at the bottom of the window (camera at y=1.0).
 
 **Journey log** — (1) The `Mate.System` namespace shadows global `System`, so
 threading/diagnostics/interop references needed `global::` qualification. (2)
@@ -47,7 +57,13 @@ struct and its `data`/`bytes_per_line`. (4) Review also found
 `IntPtr.Size` stride — fixed to `i * 4`. (5) E2E on GNOME Wayland works
 because the player runs as an XWayland window; the window is maximized by
 GNOME, so `initial_position` is superseded by WM behavior, but the window
-state flags (above, borderless) apply correctly.
+state flags (above, borderless) apply correctly. (6) `EnsureCamera` originally
+early-returned when a scene camera existed, so the transparent/orthographic
+setup never applied — it now configures the existing camera unconditionally.
+(7) Assigning a fresh `AnimatorStateMachine` to `controller.layers` does NOT
+serialize child states — the idle state must be added to the layer's real
+state machine (or the asset recreated). (8) `XStoreName` alone does not update
+the title under GNOME; `_NET_WM_NAME` (UTF-8) must also be set.
 
 ## [S1] Problem
 

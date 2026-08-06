@@ -1,3 +1,4 @@
+using System.Linq;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
@@ -41,7 +42,14 @@ namespace Mate.Bootstrap.EditorTools
 
             var sm = controller.layers[0].stateMachine;
             sm.name = "Base Layer";
-            var idle = sm.AddState("Idle");
+
+            // Idempotent: if an Idle state already exists, reuse it instead of
+            // adding "Idle 0", "Idle 1", ... on every build.
+            var idle = sm.states.FirstOrDefault(s => s.state.name == "Idle").state;
+            if (idle == null)
+            {
+                idle = sm.AddState("Idle");
+            }
             idle.motion = clip;
             sm.defaultState = idle;
 

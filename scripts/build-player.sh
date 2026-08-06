@@ -27,10 +27,15 @@ echo "Building MateRuntime v$VERSION -> $OUT/MateRuntime/MateRuntime"
 
 # Regenerate the idle AnimatorController asset (single Idle state bound to the
 # humanoid idle clip) so a fresh checkout or clip change is picked up.
+# Fail loudly: a missing controller means the character is stuck in T-pose.
 "$UNITY" -batchmode -nographics -quit \
   -projectPath "$ROOT/unity" \
   -executeMethod Mate.Bootstrap.EditorTools.MateAnimatorBuilder.BuildController \
-  -logFile "$OUT/build-controller.log" >/dev/null 2>&1 || true
+  -logFile "$OUT/build-controller.log" >/dev/null 2>&1
+if [ ! -f "$ROOT/unity/Assets/MateFramework/Resources/MateIdleController.controller" ]; then
+  echo "error: idle controller was not built (see $OUT/build-controller.log)" >&2
+  exit 1
+fi
 
 # Build the player binary. The BuildScripts directory is auto-discovered by
 # Unity (Editor folder), so no -executeMethod is required for a default build.
