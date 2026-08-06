@@ -28,10 +28,18 @@ namespace Mate.Audio
             _manager.GetPlayingAudioPrograms(programs =>
             {
                 if (programs == null) return;
-                result.AddRange(programs.Select(p => new AudioProgramInfo(
-                    p.Name, p.ProcessName, p.ProcessId, p.Volume, p.NodeId)));
+                result.AddRange(MapPrograms(programs));
             });
             return result;
+        }
+
+        /// <summary>Map grabbed AudioProgram records to framework AudioProgramInfo.</summary>
+        public static List<AudioProgramInfo> MapPrograms(IEnumerable<AudioProgram> programs)
+        {
+            return programs
+                .Select(p => new AudioProgramInfo(
+                    p.Name, p.ProcessName, p.ProcessId, p.Volume, p.NodeId))
+                .ToList();
         }
 
         public float GetPeakLevel(uint nodeId)

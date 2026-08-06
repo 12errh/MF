@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
 using UnityEngine;
 
@@ -29,7 +30,10 @@ namespace Mate.System
         private static extern void app_indicator_set_status(IntPtr indicator, int status);
 
         [DllImport(LibraryName)]
-        private static extern void app_indicator_set_icon_full(IntPtr indicator, string icon_path, string description);
+        private static extern void app_indicator_set_icon_full(IntPtr indicator, string icon_name, string description);
+
+        [DllImport(LibraryName)]
+        private static extern void app_indicator_set_icon_theme_path(IntPtr indicator, string theme_path);
 
         public void ShowIcon(string iconPath, string tooltip)
         {
@@ -45,8 +49,20 @@ namespace Mate.System
             }
 
             app_indicator_set_status(_indicator, 1); // Active
+
+            // app_indicator_set_icon_full takes a themed icon name, not a
+            // filesystem path. When a custom icon file is provided, register its
+            // directory as the icon theme path and pass the file name (without
+            // extension) as the icon name.
             if (!string.IsNullOrEmpty(iconPath))
-                app_indicator_set_icon_full(_indicator, iconPath, tooltip ?? "Mate");
+            {
+                var full = Path.GetFullPath(iconPath);
+                var dir = Path.GetDirectoryName(full);
+                var name = Path.GetFileNameWithoutExtension(full);
+                if (!string.IsNullOrEmpty(dir))
+                    app_indicator_set_icon_theme_path(_indicator, dir);
+                app_indicator_set_icon_full(_indicator, name, tooltip ?? "Mate");
+            }
 #else
             // No-op in the editor / headless tests.
 #endif
