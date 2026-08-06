@@ -3,7 +3,7 @@ feature: native-window-x11
 status: delivered
 updated: 2026-08-06
 branch: native-window-x11
-commits: 40dccd9..0874371
+commits: 40dccd9..138aa80
 ---
 
 # Native Window Backend (X11)
